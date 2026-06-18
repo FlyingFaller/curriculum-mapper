@@ -1,42 +1,75 @@
 /* --- Modular JavaScript --- */
 
+// Theme Management
+const ThemeConfig = {
+    init() {
+        const saved = localStorage.getItem('themePref');
+        if (saved) {
+            this.set(saved);
+        } else {
+            const isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+            this.set(isDark ? 'dark' : 'light');
+        }
+    },
+    toggle() {
+        const isDark = document.documentElement.classList.contains('dark');
+        this.set(isDark ? 'light' : 'dark');
+    },
+    set(mode) {
+        localStorage.setItem('themePref', mode);
+        
+        const icon = document.getElementById('theme-icon');
+        if (mode === 'dark') {
+            document.documentElement.classList.add('dark');
+            if(icon) icon.className = 'ph ph-moon text-xl';
+        } else {
+            document.documentElement.classList.remove('dark');
+            if(icon) icon.className = 'ph ph-sun text-xl';
+        }
+    }
+};
+
+window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', (e) => {
+    if (!localStorage.getItem('themePref')) {
+        ThemeConfig.set(e.matches ? 'dark' : 'light');
+    }
+});
+
+
 // 1. DATA MODELS & STATE
 const State = {
-    terms: [], // Array of { id: string, name: string }
-    courses: {}, // Map of id -> { id, title, credits, prereqs[], coreqs[], joint[], desc }
-    schedule: {}, // Map of courseId -> { termId -> { active: boolean, hidden: boolean } }
+    terms: [], 
+    courses: {}, 
+    schedule: {}, 
     
     initDefault() {
-        // this.terms = [
-        //     { id: 't-1', name: 'Term 1' },
-        //     { id: 't-2', name: 'Term 2' },
-        //     { id: 't-3', name: 'Term 3' }
-        // ];
-        
-        // // Demo Data
+        this.terms = [
+            { id: 't-1', name: 'AUT 26', color: '' },
+            { id: 't-2', name: 'WIN 27', color: '' },
+            { id: 't-3', name: 'SPR 27', color: '' },
+            { id: 't-4', name: 'AUT 27', color: '' },
+            { id: 't-5', name: 'WIN 28', color: '' },
+            { id: 't-6', name: 'SPR 28', color: '' }
+            
+        ];
+
         // this.courses = {
-        //     'MATH221': { id: 'MATH221', title: 'Calculus I', credits: 4, prereqs: [], coreqs: [], joint: [], desc: 'First course in calculus and analytic geometry.' },
-        //     'MATH231': { id: 'MATH231', title: 'Calculus II', credits: 3, prereqs: ['MATH221'], coreqs: [], joint: [], desc: 'Second course in calculus: integration, series.' },
-        //     'PHYS211': { id: 'PHYS211', title: 'Physics: Mechanics', credits: 4, prereqs: ['MATH221'], coreqs: ['MATH231'], joint: [], desc: 'Newton\'s Laws, work and energy, kinematics.' },
-        //     'AE202': { id: 'AE202', title: 'Aerospace Flight Mech', credits: 3, prereqs: ['PHYS211', 'MATH231'], coreqs: [], joint: [], desc: 'Principles of aerospace flight mechanics.' }
+        //     'MATH124': { id: 'MATH124', title: 'Calculus I', credits: 5, prereqs: [], coreqs: [], joint: [], desc: 'Calculus with analytic geometry.', color: '' },
+        //     'MATH125': { id: 'MATH125', title: 'Calculus II', credits: 5, prereqs: ['MATH124'], coreqs: [], joint: [], desc: 'Integration, applications, series.', color: '' },
+        //     'MATH126': { id: 'MATH126', title: 'Calculus III', credits: 5, prereqs: ['MATH125'], coreqs: [], joint: [], desc: 'Multivariable calculus, vector geometry.', color: '' },
+        //     'PHYS121': { id: 'PHYS121', title: 'Mechanics', credits: 5, prereqs: [], coreqs: ['MATH124'], joint: [], desc: 'Basic principles of mechanics.', color: '' },
+        //     'PHYS122': { id: 'PHYS122', title: 'Electromagnetism', credits: 5, prereqs: ['PHYS121', 'MATH125'], coreqs: [], joint: [], desc: 'Electrostatics, circuits, magnetism.', color: '' },
+        //     'AA210': { id: 'AA210', title: 'Engineering Statics', credits: 4, prereqs: ['PHYS121', 'MATH126'], coreqs: [], joint: [], desc: 'Statics of particles, rigid bodies.', color: '' }
         // };
 
         // this.schedule = {
-        //     'MATH221': { 't-1': { active: true, hidden: false } },
-        //     'MATH231': { 't-2': { active: true, hidden: false } },
-        //     'PHYS211': { 't-2': { active: true, hidden: false } },
-        //     'AE202': { 't-3': { active: true, hidden: false } }
+        //     'MATH124': { 't-1': { active: true, hidden: false } },
+        //     'PHYS121': { 't-1': { active: true, hidden: false } },
+        //     'MATH125': { 't-2': { active: true, hidden: false } },
+        //     'PHYS122': { 't-2': { active: true, hidden: false } },
+        //     'MATH126': { 't-3': { active: true, hidden: false } },
+        //     'AA210':   { 't-4': { active: true, hidden: false } }
         // };
-
-        this.terms = [
-            { id: 't-1', name: 'AUT 26' },
-            { id: 't-2', name: 'WIN 27' },
-            { id: 't-3', name: 'SPR 27' },
-            { id: 't-4', name: 'AUT 27' },
-            { id: 't-5', name: 'WIN 28' },
-            { id: 't-6', name: 'SPR 28' },
-        ];
-
         this.courses = {};
         this.schedule = {};
     }
@@ -101,7 +134,6 @@ const Storage = {
 
 // 3. HOVER LOGIC ENGINE
 const HoverEngine = {
-    // Helper: Find active, non-hidden instances of a course and return their Term Indexes
     getValidInstances(courseId) {
         if(!State.schedule[courseId]) return [];
         let indices = [];
@@ -115,13 +147,12 @@ const HoverEngine = {
     },
 
     analyze(hoverCid, hoverTid) {
-        const highlights = {}; // Format: "courseId_termId": "css-class"
+        const highlights = {}; 
         const status = { hasTempError: false, hasMissError: false };
         const hoverTermIdx = State.terms.findIndex(t => t.id === hoverTid);
 
         if (hoverTermIdx === -1 || !State.courses[hoverCid]) return { highlights, status };
 
-        // --- 1. PREREQUISITES (Looking backward) ---
         let preQueue = [{ cid: hoverCid, termIdx: hoverTermIdx, depth: 1 }];
         let preVisited = new Set([hoverCid]);
 
@@ -135,28 +166,22 @@ const HoverEngine = {
                 if (instances.length === 0) {
                     if (curr.cid === hoverCid) status.hasMissError = true;
                 } else {
-                    // Valid prereqs must happen strictly BEFORE the dependent course
                     let validInstances = instances.filter(tIdx => tIdx < curr.termIdx);
-                    
                     if (validInstances.length === 0) {
                         if (curr.cid === hoverCid) status.hasTempError = true;
                     } else {
-                        // Mark on map
                         validInstances.forEach(tIdx => {
                             let termId = State.terms[tIdx].id;
                             highlights[`${reqId}_${termId}`] = curr.depth === 1 ? 'hl-imm-pre' : 'hl-sec-pre';
                         });
-                        // Recurse
                         if (!preVisited.has(reqId)) {
                             preVisited.add(reqId);
-                            // Use the latest valid instance term for temporal chain checking
                             preQueue.push({ cid: reqId, termIdx: Math.max(...validInstances), depth: curr.depth + 1 });
                         }
                     }
                 }
             });
 
-            // Corequisites (Typically must be in the same term or earlier)
             if (curr.cid === hoverCid) {
                 cData.coreqs.forEach(reqId => {
                     let instances = this.getValidInstances(reqId);
@@ -176,8 +201,6 @@ const HoverEngine = {
             }
         }
 
-        // --- 2. POSTREQUISITES (Looking forward) ---
-        // What future courses require the hovered course?
         let postQueue = [{ cid: hoverCid, termIdx: hoverTermIdx }];
         let postVisited = new Set([hoverCid]);
 
@@ -187,7 +210,6 @@ const HoverEngine = {
             Object.values(State.courses).forEach(potentialPost => {
                 if (potentialPost.prereqs.includes(curr.cid)) {
                     let instances = this.getValidInstances(potentialPost.id);
-                    // Valid postreqs must happen strictly AFTER the current course
                     let validInstances = instances.filter(tIdx => tIdx > curr.termIdx);
                     
                     validInstances.forEach(tIdx => {
@@ -210,7 +232,34 @@ const HoverEngine = {
 const UI = {
     utils: {
         sanitizeId: (str) => str.toUpperCase().replace(/\s+/g, '').replace(/[^A-Z0-9_-]/g, ''),
-        parseList: (str) => str.split(',').map(s => s.trim().toUpperCase().replace(/\s+/g, '')).filter(s => s.length > 0)
+        parseList: (str) => str.split(',').map(s => s.trim().toUpperCase().replace(/\s+/g, '')).filter(s => s.length > 0),
+        getContrastColor(hexColor) {
+            if (!hexColor) return '';
+            let r = parseInt(hexColor.substr(1, 2), 16);
+            let g = parseInt(hexColor.substr(3, 2), 16);
+            let b = parseInt(hexColor.substr(5, 2), 16);
+            let yiq = ((r * 299) + (g * 587) + (b * 114)) / 1000;
+            return (yiq >= 128) ? '#000000' : '#ffffff';
+        },
+        setColoris(selector, color) {
+            const input = document.querySelector(selector);
+            if (input) {
+                input.value = color;
+                input.dispatchEvent(new Event('input', { bubbles: true }));
+            }
+        }
+    },
+
+    initColoris() {
+        Coloris({
+            theme: 'pill',
+            formatToggle: true,
+            alpha: false,
+            swatches: [
+                '#ffffff', '#fca5a5', '#fdba74', '#fde047', 
+                '#86efac', '#93c5fd', '#d8b4fe', '#f9a8d4'
+            ]
+        });
     },
 
     initResizer() {
@@ -221,18 +270,15 @@ const UI = {
         resizer.addEventListener('mousedown', (e) => {
             isDragging = true;
             document.body.style.cursor = 'row-resize';
-            document.body.classList.add('select-none'); // Prevent text selection while dragging
+            document.body.classList.add('select-none');
         });
 
         document.addEventListener('mousemove', (e) => {
             if (!isDragging) return;
-            // Calculate new height, restricting bounds (min 100px, max 80% of window)
             let newHeight = window.innerHeight - e.clientY;
             const maxHeight = window.innerHeight * 0.8;
-            
             if (newHeight < 100) newHeight = 100;
             if (newHeight > maxHeight) newHeight = maxHeight;
-            
             footer.style.height = `${newHeight}px`;
         });
 
@@ -249,44 +295,45 @@ const UI = {
         const thead = document.getElementById('table-head');
         const tbody = document.getElementById('table-body');
         
-        // Render Header (Terms)
-        let headerHTML = `<tr class="bg-white">
-            <th class="sticky-col px-2 py-1.5 min-w-[8rem] max-w-[8rem] z-30 border-b border-gray-300">
-                <div class="font-bold text-[12px] text-gray-700">Courses</div>
+        let headerHTML = `<tr class="bg-surface">
+            <th class="sticky-col px-3 py-2 min-w-[12rem] max-w-[12rem] z-30 border-b border-border bg-surface">
+                <div class="font-bold fs-header">Courses</div>
             </th>`;
-        State.terms.forEach((term, idx) => {
-            headerHTML += `<th class="px-2 py-1.5 font-bold text-[12px] text-gray-800 min-w-[7rem] max-w-[7rem] border-r relative group text-left border-b border-gray-300 truncate">
-                ${term.name}
-                <div class="absolute top-1 right-1 opacity-0 group-hover:opacity-100 flex gap-0.5 transition bg-white/90 rounded px-0.5 shadow-sm">
-                    <button onclick="UI.editTerm('${term.id}')" class="text-gray-500 hover:text-indigo-600 p-0.5"><i class="ph ph-pencil-simple"></i></button>
-                    <button onclick="App.deleteTerm('${term.id}')" class="text-gray-500 hover:text-red-600 p-0.5"><i class="ph ph-trash"></i></button>
+        
+        State.terms.forEach((term) => {
+            let styleStr = term.color ? `background-color: ${term.color}; color: ${UI.utils.getContrastColor(term.color)};` : `background-color: var(--bg-surface);`;
+            
+            headerHTML += `<th style="${styleStr}" class="px-3 py-2 font-bold min-w-[10rem] max-w-[10rem] border-r border-border relative group text-left border-b">
+                <div class="truncate w-full pr-8 fs-header">${term.name}</div>
+                <div class="absolute top-1 right-1 opacity-0 group-hover:opacity-100 flex bg-surface shadow-md border border-border rounded overflow-hidden z-50">
+                    <button onclick="UI.editTerm('${term.id}')" class="w-7 h-7 flex items-center justify-center text-text-main hover:text-accent hover:bg-surface-hover transition-colors"><i class="ph ph-pencil-simple fs-icon leading-none"></i></button>
+                    <button onclick="App.deleteTerm('${term.id}')" class="w-7 h-7 flex items-center justify-center text-text-main hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30 transition-colors"><i class="ph ph-trash fs-icon leading-none"></i></button>
                 </div>
             </th>`;
         });
         headerHTML += `</tr>`;
         thead.innerHTML = headerHTML;
 
-        // Render Body (Courses)
         let bodyHTML = '';
         const sortedCourses = Object.values(State.courses).sort((a,b) => a.id.localeCompare(b.id));
 
         sortedCourses.forEach(course => {
-            bodyHTML += `<tr class="hover:bg-gray-50/50" data-course-row="${course.id}">`;
+            bodyHTML += `<tr class="hover:bg-surface-hover transition-colors" data-course-row="${course.id}">`;
             
-            // Course Meta Column (Sticky)
+            let cStyleStr = course.color ? `background-color: ${course.color}; color: ${UI.utils.getContrastColor(course.color)};` : `background-color: var(--bg-surface);`;
+
             bodyHTML += `
-                <td class="sticky-col px-2 py-1.5 align-top group border-b border-gray-200">
+                <td style="${cStyleStr}" class="sticky-col px-3 py-2 align-top group border-b border-border">
                     <div class="flex justify-between items-start relative">
-                        <span class="font-bold text-gray-900 text-[12px] leading-tight truncate pr-4">${course.id} <span class="font-normal text-[11px]">(${course.credits})</span></span>
-                        <div class="flex gap-0.5 opacity-0 group-hover:opacity-100 transition absolute right-0 top-0">
-                            <button onclick="UI.editCourse('${course.id}')" class="text-gray-400 hover:text-indigo-600 bg-transparent"><i class="ph ph-pencil-simple"></i></button>
-                            <button onclick="App.deleteCourse('${course.id}')" class="text-gray-400 hover:text-red-600 bg-transparent"><i class="ph ph-trash"></i></button>
+                        <span class="font-bold fs-course-id leading-tight truncate pr-8">${course.id} <span class="font-normal fs-course-credits opacity-80">(${course.credits})</span></span>
+                        <div class="absolute top-1 right-1 opacity-0 group-hover:opacity-100 flex bg-surface shadow-md border border-border rounded overflow-hidden z-50">
+                            <button onclick="UI.editCourse('${course.id}')" class="w-7 h-7 flex items-center justify-center text-text-main hover:text-accent hover:bg-surface-hover transition-colors"><i class="ph ph-pencil-simple fs-icon leading-none"></i></button>
+                            <button onclick="App.deleteCourse('${course.id}')" class="w-7 h-7 flex items-center justify-center text-text-main hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30 transition-colors"><i class="ph ph-trash fs-icon leading-none"></i></button>
                         </div>
                     </div>
-                    <div class="text-[11px] text-gray-700 truncate leading-tight mt-0" title="${course.title}">${course.title}</div>
+                    <div class="fs-course-title opacity-90 truncate leading-tight mt-0.5" title="${course.title}">${course.title}</div>
                 </td>`;
 
-            // Term Cells
             State.terms.forEach(term => {
                 const cellData = State.schedule[course.id]?.[term.id];
                 const isActive = cellData?.active;
@@ -298,7 +345,6 @@ const UI = {
                     const hiddenClass = isHidden ? 'hidden-instance' : '';
                     const eyeIcon = isHidden ? 'ph-eye-slash' : 'ph-eye';
                     
-                    // Render Course Card
                     bodyHTML += `
                         <div class="course-card ${hiddenClass} card-node flex flex-col justify-between group/card relative overflow-hidden" 
                              data-cid="${course.id}" data-tid="${term.id}"
@@ -306,19 +352,18 @@ const UI = {
                              onmouseleave="UI.handleMouseOut()">
                              
                              <div class="flex flex-col w-full">
-                                <span class="font-bold text-[11.5px] leading-tight truncate">${course.id} <span class="font-normal text-[10.5px]">(${course.credits})</span></span>
-                                <div class="text-[10.5px] truncate leading-tight mt-0">${course.title}</div>
+                                <span class="font-bold fs-course-id leading-tight truncate pr-8">${course.id} <span class="font-normal fs-course-credits">(${course.credits})</span></span>
+                                <div class="fs-course-title truncate leading-tight mt-0.5">${course.title}</div>
                              </div>
                              
-                             ${course.joint.length ? `<div class="text-[9px] mt-auto font-medium opacity-80 truncate leading-tight pb-0.5">Joint: ${course.joint.join(', ')}</div>` : `<div class="mt-auto"></div>`}
+                             ${course.joint.length ? `<div class="fs-course-joint mt-auto font-medium opacity-80 truncate leading-tight pb-0.5 italic">Joint: ${course.joint.join(', ')}</div>` : `<div class="mt-auto"></div>`}
                              
-                             <!-- Floating action buttons -->
-                             <div class="absolute top-0 right-0 flex gap-0.5 opacity-0 group-hover/card:opacity-100 transition-opacity z-10 p-0.5">
-                                <button class="p-0.5 rounded text-gray-300 hover:text-white bg-transparent transition-colors" onclick="App.toggleHidden(event, '${course.id}', '${term.id}')" title="Toggle active status for prerequisites">
-                                    <i class="ph ${eyeIcon} text-[16px]"></i>
+                             <div class="absolute top-1 right-1 flex opacity-0 group-hover/card:opacity-100 transition-opacity z-50 bg-surface shadow-md border border-border rounded overflow-hidden">
+                                <button class="w-7 h-7 flex items-center justify-center text-text-main hover:text-accent hover:bg-surface-hover transition-colors" onclick="App.toggleHidden(event, '${course.id}', '${term.id}')" title="Toggle active status">
+                                    <i class="ph ${eyeIcon} fs-icon leading-none"></i>
                                 </button>
-                                <button class="p-0.5 rounded text-gray-300 hover:text-red-400 bg-transparent transition-colors" onclick="App.removeCard(event, '${course.id}', '${term.id}')" title="Remove from term">
-                                    <i class="ph ph-x text-[16px]"></i>
+                                <button class="w-7 h-7 flex items-center justify-center text-text-main hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30 transition-colors" onclick="App.removeCard(event, '${course.id}', '${term.id}')" title="Remove from term">
+                                    <i class="ph ph-x fs-icon leading-none"></i>
                                 </button>
                              </div>
                         </div>
@@ -326,17 +371,15 @@ const UI = {
                 }
                 bodyHTML += `</td>`;
             });
-            
             bodyHTML += `</tr>`;
         });
-
         tbody.innerHTML = bodyHTML;
     },
 
-    // --- Modals ---
     openTermModal() {
         document.getElementById('term-name').dataset.id = '';
         document.getElementById('term-name').value = '';
+        UI.utils.setColoris('#term-color', '#ffffff');
         document.getElementById('term-modal').classList.remove('hidden');
         setTimeout(() => document.getElementById('term-name').focus(), 50);
     },
@@ -346,6 +389,7 @@ const UI = {
         if(!term) return;
         document.getElementById('term-name').dataset.id = tId;
         document.getElementById('term-name').value = term.name;
+        UI.utils.setColoris('#term-color', term.color || '#ffffff');
         document.getElementById('term-modal').classList.remove('hidden');
     },
     
@@ -353,6 +397,7 @@ const UI = {
         document.getElementById('course-form').reset();
         document.getElementById('course-form').dataset.originalId = '';
         document.getElementById('course-id').readOnly = false;
+        UI.utils.setColoris('#course-color', '#ffffff');
         document.getElementById('course-modal-title').innerText = "Add Course";
         document.getElementById('course-modal').classList.remove('hidden');
         setTimeout(() => document.getElementById('course-id').focus(), 50);
@@ -366,6 +411,7 @@ const UI = {
         document.getElementById('course-id').readOnly = false;
         document.getElementById('course-title').value = c.title;
         document.getElementById('course-credits').value = c.credits;
+        UI.utils.setColoris('#course-color', c.color || '#ffffff');
         document.getElementById('course-prereqs').value = c.prereqs.join(', ');
         document.getElementById('course-coreqs').value = c.coreqs.join(', ');
         document.getElementById('course-joint').value = c.joint.join(', ');
@@ -378,15 +424,6 @@ const UI = {
     closeModals() {
         document.getElementById('term-modal').classList.add('hidden');
         document.getElementById('course-modal').classList.add('hidden');
-    },
-    
-    showAlert(msg) {
-        document.getElementById('alert-message').innerText = msg;
-        document.getElementById('alert-modal').classList.remove('hidden');
-    },
-    
-    closeAlert() {
-        document.getElementById('alert-modal').classList.add('hidden');
     },
 
     showConfirm(title, msg, onConfirmCallback) {
@@ -403,79 +440,73 @@ const UI = {
         document.getElementById('confirm-modal').classList.add('hidden');
     },
 
-    // --- Hover Effects ---
     handleMouseOver(cId, tId) {
         const cData = State.courses[cId];
         if(!cData) return;
 
-        // 1. Update Footer Content
         document.getElementById('desc-title').innerText = `${cData.id}: ${cData.title}`;
-        let tags = `<span class="bg-gray-200 px-2 py-1 rounded text-gray-700">${cData.credits} Credits</span>`;
-        if(cData.prereqs.length) tags += `<span class="bg-blue-100 px-2 py-1 rounded text-blue-800 border border-blue-200">Prereqs: ${cData.prereqs.join(', ')}</span>`;
-        if(cData.coreqs.length) tags += `<span class="bg-purple-100 px-2 py-1 rounded text-purple-800 border border-purple-200">Coreqs: ${cData.coreqs.join(', ')}</span>`;
-        if(cData.joint.length) tags += `<span class="bg-indigo-100 px-2 py-1 rounded text-indigo-800 border border-indigo-200">Joint: ${cData.joint.join(', ')}</span>`;
+        let tags = `<span class="bg-surface-alt px-2 py-1 rounded border border-border">${cData.credits} Credits</span>`;
+        if(cData.prereqs.length) tags += `<span class="px-2 py-1 rounded text-[#1e3a8a] bg-[#93c5fd] border border-[#1e3a8a]">Prereqs: ${cData.prereqs.join(', ')}</span>`;
+        if(cData.coreqs.length) tags += `<span class="px-2 py-1 rounded text-[#32006e] bg-[#d8c2f5] border border-[#32006e]">Coreqs: ${cData.coreqs.join(', ')}</span>`;
         document.getElementById('desc-tags').innerHTML = tags;
         document.getElementById('desc-content').innerText = cData.desc || "No description provided.";
 
-        // 2. Compute Dependencies
         const { highlights, status } = HoverEngine.analyze(cId, tId);
 
-        // 3. Apply CSS Classes
         document.querySelectorAll('.card-node').forEach(node => {
             const nodeCid = node.getAttribute('data-cid');
             const nodeTid = node.getAttribute('data-tid');
             
             if (nodeCid === cId && nodeTid === tId) {
-                // The hovered card itself
                 if (status.hasMissError) node.classList.add('hl-err-miss');
                 else if (status.hasTempError) node.classList.add('hl-err-temp');
                 else node.classList.add('hl-hover');
             } else {
-                // Dependent cards
                 const key = `${nodeCid}_${nodeTid}`;
-                if (highlights[key]) {
-                    node.classList.add(highlights[key]);
-                }
+                if (highlights[key]) node.classList.add(highlights[key]);
             }
         });
     },
 
     handleMouseOut() {
-        // Reset Footer
         document.getElementById('desc-title').innerText = "Hover over a course";
         document.getElementById('desc-tags').innerHTML = "";
         document.getElementById('desc-content').innerText = "";
-
-        // Remove highlights
         const classesToRemove = ['hl-hover', 'hl-imm-pre', 'hl-sec-pre', 'hl-post', 'hl-coreq', 'hl-err-temp', 'hl-err-miss'];
-        document.querySelectorAll('.card-node').forEach(node => {
-            node.classList.remove(...classesToRemove);
-        });
+        document.querySelectorAll('.card-node').forEach(node => node.classList.remove(...classesToRemove));
     }
 };
 
 // 5. APPLICATION LOGIC
 const App = {
     init() {
+        ThemeConfig.init();
         if (!Storage.load()) {
             State.initDefault();
             Storage.save();
         }
+        UI.initColoris();
         UI.renderTable();
-        UI.initResizer(); // Initialize the drag-to-resize footer
+        UI.initResizer();
     },
 
     saveTerm() {
         const name = document.getElementById('term-name').value.trim();
         if (!name) return;
         
+        const colorVal = document.getElementById('term-color').value;
+        const color = colorVal !== '#ffffff' ? colorVal : '';
         const id = document.getElementById('term-name').dataset.id;
+        
         if (id) {
             const term = State.terms.find(t => t.id === id);
-            if (term) term.name = name;
+            if (term) {
+                term.name = name;
+                term.color = color;
+            }
         } else {
             const newId = 't-' + Date.now();
-            State.terms.push({ id: newId, name });
+            State.terms.push({ id: newId, name, color: color });
         }
         
         Storage.save();
@@ -486,7 +517,6 @@ const App = {
     deleteTerm(termId) {
         UI.showConfirm("Delete Term", "Delete this term and all course assignments in it?", () => {
             State.terms = State.terms.filter(t => t.id !== termId);
-            // Clean schedule map
             Object.keys(State.schedule).forEach(cId => {
                 if (State.schedule[cId][termId]) delete State.schedule[cId][termId];
             });
@@ -498,28 +528,25 @@ const App = {
     saveCourse() {
         const rawId = document.getElementById('course-id').value;
         const id = UI.utils.sanitizeId(rawId);
-        if(!id) return UI.showAlert("Course ID is required.");
+        if(!id) return alert("Course ID is required.");
         
         const originalId = document.getElementById('course-form').dataset.originalId;
+        
+        const colorVal = document.getElementById('course-color').value;
+        const color = colorVal !== '#ffffff' ? colorVal : '';
 
         if (originalId && originalId !== id) {
-            // Changing ID
-            if (State.courses[id]) {
-                return UI.showAlert("A course with this new ID already exists!");
-            }
+            if (State.courses[id]) return alert("A course with this new ID already exists!");
             
-            // Update main course record
             State.courses[id] = State.courses[originalId];
             State.courses[id].id = id;
             delete State.courses[originalId];
             
-            // Transfer schedule
             if (State.schedule[originalId]) {
                 State.schedule[id] = State.schedule[originalId];
                 delete State.schedule[originalId];
             }
             
-            // Find and replace all references in other courses' prereqs, coreqs, and joints
             Object.values(State.courses).forEach(c => {
                 c.prereqs = c.prereqs.map(req => req === originalId ? id : req);
                 c.coreqs = c.coreqs.map(req => req === originalId ? id : req);
@@ -534,7 +561,8 @@ const App = {
             prereqs: UI.utils.parseList(document.getElementById('course-prereqs').value),
             coreqs: UI.utils.parseList(document.getElementById('course-coreqs').value),
             joint: UI.utils.parseList(document.getElementById('course-joint').value),
-            desc: document.getElementById('course-desc').value.trim()
+            desc: document.getElementById('course-desc').value.trim(),
+            color: color
         };
 
         Storage.save();
@@ -546,7 +574,6 @@ const App = {
         UI.showConfirm("Delete Course", `Delete course ${courseId} completely?`, () => {
             delete State.courses[courseId];
             delete State.schedule[courseId];
-            // Also clean up references in other courses
             Object.values(State.courses).forEach(c => {
                 c.prereqs = c.prereqs.filter(req => req !== courseId);
                 c.coreqs = c.coreqs.filter(req => req !== courseId);
@@ -559,8 +586,6 @@ const App = {
 
     toggleCell(courseId, termId) {
         if (!State.schedule[courseId]) State.schedule[courseId] = {};
-        
-        // If cell is empty, clicking adds the course
         if (!State.schedule[courseId][termId]?.active) {
             State.schedule[courseId][termId] = { active: true, hidden: false };
             Storage.save();
@@ -569,25 +594,74 @@ const App = {
     },
 
     removeCard(event, courseId, termId) {
-        event.stopPropagation(); // Prevent cell click
+        event.stopPropagation(); 
         if (State.schedule[courseId]?.[termId]) {
             State.schedule[courseId][termId].active = false;
             Storage.save();
             UI.renderTable();
-            UI.handleMouseOut(); // Clear ghost hovers
+            UI.handleMouseOut();
         }
     },
 
     toggleHidden(event, courseId, termId) {
-        event.stopPropagation(); // Prevent cell click
+        event.stopPropagation();
         if (State.schedule[courseId]?.[termId]) {
             State.schedule[courseId][termId].hidden = !State.schedule[courseId][termId].hidden;
             Storage.save();
             UI.renderTable();
         }
     },
+
+    showAllHidden() {
+        UI.showConfirm("Unhide All", "Are you sure you want to make all hidden course cards visible?", () => {
+            Object.values(State.schedule).forEach(termMap => {
+                Object.values(termMap).forEach(cell => {
+                    if (cell.active) cell.hidden = false;
+                });
+            });
+            Storage.save();
+            UI.renderTable();
+        });
+    },
+
+    hideErrors() {
+        UI.showConfirm("Hide Errors", "This will automatically hide scheduled instances that have missing or incorrectly timed prerequisites. Proceed?", () => {
+            let changed = true;
+            let passLimit = 100; // infinite loop protection
+            let passes = 0;
+            
+            while (changed && passes < passLimit) {
+                changed = false;
+                passes++;
+                let toHide = [];
+
+                const allCourses = Object.keys(State.schedule);
+                for (const cId of allCourses) {
+                    for (const tId in State.schedule[cId]) {
+                        let cell = State.schedule[cId][tId];
+                        if (cell.active && !cell.hidden) {
+                            let { status } = HoverEngine.analyze(cId, tId);
+                            if (status.hasTempError || status.hasMissError) {
+                                toHide.push({ cId, tId });
+                            }
+                        }
+                    }
+                }
+
+                if (toHide.length > 0) {
+                    toHide.forEach(({ cId, tId }) => {
+                        State.schedule[cId][tId].hidden = true;
+                    });
+                    changed = true; // another check needed because hiding might have broken down-chain courses
+                }
+            }
+            Storage.save();
+            UI.renderTable();
+        });
+    },
+
     resetMap() {
-        UI.showConfirm("Reset Map", "Are you sure you want to completely reset the schedule builder? This will erase all custom courses and terms.", () => {
+        UI.showConfirm("Reset Map", "Are you sure you want to completely reset the schedule builder?", () => {
             localStorage.removeItem('curriculumMap');
             State.initDefault();
             Storage.save();
@@ -596,7 +670,4 @@ const App = {
     }
 };
 
-
-
-// Bootstrap
 document.addEventListener('DOMContentLoaded', () => App.init());

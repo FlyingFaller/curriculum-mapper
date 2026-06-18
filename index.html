@@ -4,193 +4,208 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Curriculum Map Builder</title>
-    <!-- Tailwind for rapid layout -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Phosphor Icons -->
+    <script>
+        tailwind.config = {
+            darkMode: 'class', 
+            theme: {
+                extend: {
+                    colors: {
+                        canvas: 'var(--bg-canvas)',
+                        surface: 'var(--bg-surface)',
+                        'surface-hover': 'var(--bg-surface-hover)',
+                        'surface-alt': 'var(--bg-surface-alt)',
+                        'text-main': 'var(--text-main)',
+                        'text-muted': 'var(--text-muted)',
+                        'text-inverse': 'var(--text-inverse)',
+                        border: 'var(--border-color)',
+                        'border-focus': 'var(--border-focus)',
+                        accent: 'var(--accent-main)',
+                        'accent-hover': 'var(--accent-hover)',
+                        'accent-bg': 'var(--accent-bg)',
+                        'accent-text': 'var(--accent-text)'
+                    }
+                }
+            }
+        }
+    </script>
     <script src="https://unpkg.com/@phosphor-icons/web"></script>
-    <!-- External Stylesheet -->
+    
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/mdbassit/Coloris@latest/dist/coloris.min.css"/>
+    <script src="https://cdn.jsdelivr.net/gh/mdbassit/Coloris@latest/dist/coloris.min.js"></script>
+    
     <link rel="stylesheet" href="styles.css">
 </head>
-<body class="bg-gray-50 flex flex-col h-screen overflow-hidden text-sm">
+<body class="bg-canvas flex flex-col h-screen overflow-hidden text-sm text-text-main transition-colors duration-200">
 
-    <!-- Header & Controls -->
-    <header class="bg-white border-b px-6 py-4 flex justify-between items-center shrink-0 shadow-sm z-40">
+    <header class="bg-surface border-b border-border px-6 py-4 flex justify-between items-center shrink-0 shadow-sm z-40 transition-colors duration-200">
         <div>
-            <h1 class="text-2xl font-bold text-gray-800 tracking-tight">Curriculum Map Builder</h1>
-            <!-- <p class="text-gray-500 text-xs mt-1">Interactive prerequisite visualization</p> -->
+            <h1 class="text-2xl font-bold text-text-main tracking-tight">Curriculum Map Builder</h1>
         </div>
-        <div class="flex gap-3">
-            <button onclick="UI.openTermModal()" class="px-4 py-2 bg-white border border-gray-300 rounded-md hover:bg-gray-50 flex items-center gap-2 font-medium text-gray-700 transition">
-                <!-- <i class="ph ph-columns text-lg"></i> Add Term -->
-                 Add Term
+        <div class="flex gap-3 items-center">
+            
+            <button onclick="ThemeConfig.toggle()" class="p-2 text-text-muted hover:text-text-main transition rounded-md hover:bg-surface-hover" title="Toggle Theme">
+                <i id="theme-icon" class="ph ph-sun text-xl"></i>
             </button>
-            <button onclick="UI.openCourseModal()" class="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 flex items-center gap-2 font-medium transition shadow-sm">
-                <!-- <i class="ph ph-book-bookmark text-lg"></i> Add Course -->
-                 Add Course
+
+            <div class="w-px bg-border mx-1 h-6"></div>
+
+            <button onclick="UI.openTermModal()" class="px-4 py-2 bg-surface border border-border rounded-md hover:bg-surface-hover flex items-center gap-2 font-medium text-text-main transition">
+                Add Term
             </button>
-            <div class="w-px bg-gray-300 mx-1"></div>
-            <button onclick="App.resetMap()" class="px-3 py-2 text-gray-400 hover:text-red-600 transition" title="Reset Schedule">
+            <button onclick="UI.openCourseModal()" class="px-4 py-2 bg-accent text-white rounded-md hover:bg-accent-hover flex items-center gap-2 font-medium transition shadow-sm">
+                Add Course
+            </button>
+
+            <div class="w-px bg-border mx-1 h-6"></div>
+
+            <button onclick="App.showAllHidden()" class="px-3 py-2 text-text-muted hover:text-text-main transition" title="Show All Hidden Cards">
+                <i class="ph ph-eye text-xl"></i>
+            </button>
+            <button onclick="App.hideErrors()" class="px-3 py-2 text-text-muted hover:text-red-500 transition" title="Hide Erroneous Cards">
+                <i class="ph ph-magic-wand text-xl"></i>
+            </button>
+            <button onclick="App.resetMap()" class="px-3 py-2 text-text-muted hover:text-red-500 transition" title="Reset Schedule">
                 <i class="ph ph-arrow-counter-clockwise text-xl"></i>
             </button>
-            <button onclick="Storage.exportData()" class="px-3 py-2 text-gray-600 hover:text-indigo-600 transition" title="Export JSON">
+            <button onclick="Storage.exportData()" class="px-3 py-2 text-text-muted hover:text-accent transition" title="Export JSON">
                 <i class="ph ph-download-simple text-xl"></i>
             </button>
-            <label class="px-3 py-2 text-gray-600 hover:text-indigo-600 cursor-pointer transition" title="Import JSON">
+            <label class="px-3 py-2 text-text-muted hover:text-accent cursor-pointer transition" title="Import JSON">
                 <i class="ph ph-upload-simple text-xl"></i>
                 <input type="file" id="importFile" class="hidden" accept=".json" onchange="Storage.importData(event)">
             </label>
         </div>
     </header>
 
-    <!-- Main Grid Area -->
     <main class="flex-1 p-6 overflow-hidden flex flex-col">
         
-        <!-- Compact Spaced Legend -->
-        <div class="flex w-full justify-between gap-2 text-[11.5px] font-medium mb-3 shrink-0">
-            <div class="flex-1 px-2 py-1 bg-[#93d08f] border border-gray-400 text-gray-900 shadow-sm text-center truncate rounded-sm">Course prerequisite chain</div>
-            <div class="flex-1 px-2 py-1 bg-[#317d31] border border-gray-400 text-white shadow-sm text-center truncate rounded-sm">Immediate prerequisite</div>
-            <div class="flex-1 px-2 py-1 bg-[#8250c6] border border-gray-400 text-white shadow-sm text-center truncate rounded-sm">Concurrent required</div>
-            <div class="flex-1 px-2 py-1 bg-[#6cc6eb] border border-gray-400 text-gray-900 shadow-sm text-center truncate rounded-sm">Postrequisite sequence</div>
-            <div class="flex-1 px-2 py-1 bg-red-300 border border-red-500 text-red-900 shadow-sm text-center truncate rounded-sm">Timing Error</div>
-            <div class="flex-1 px-2 py-1 bg-red-500 border border-red-800 text-white shadow-sm text-center truncate rounded-sm">Missing Error</div>
+        <div class="flex w-full justify-between gap-3 fs-legend font-medium mb-4 shrink-0">
+            <div class="flex-1 px-3 py-1.5 bg-[var(--color-sec-pre)] border border-border text-gray-900 shadow-sm text-center truncate rounded-md">Course prerequisite chain</div>
+            <div class="flex-1 px-3 py-1.5 bg-[var(--color-imm-pre)] border border-border text-white shadow-sm text-center truncate rounded-md">Immediate prerequisite</div>
+            <div class="flex-1 px-3 py-1.5 bg-[var(--color-coreq)] border border-border text-white shadow-sm text-center truncate rounded-md">Concurrent required</div>
+            <div class="flex-1 px-3 py-1.5 bg-[var(--color-post)] border border-border text-gray-900 shadow-sm text-center truncate rounded-md">Postrequisite sequence</div>
+            <div class="flex-1 px-3 py-1.5 bg-[var(--color-err-temp)] border border-red-500 text-red-900 dark:text-white shadow-sm text-center truncate rounded-md">Timing Error</div>
+            <div class="flex-1 px-3 py-1.5 bg-[var(--color-err-miss)] border border-red-800 text-white shadow-sm text-center truncate rounded-md">Missing Error</div>
         </div>
 
-        <div class="bg-white border rounded-xl shadow-sm flex-1 table-container relative" id="table-wrapper">
+        <div class="bg-surface border border-border rounded-xl shadow-sm flex-1 table-container relative" id="table-wrapper">
             <table class="w-full text-left" id="schedule-table">
                 <thead id="table-head">
-                    <!-- Terms rendered here -->
-                </thead>
+                    </thead>
                 <tbody id="table-body">
-                    <!-- Courses rendered here -->
-                </tbody>
+                    </tbody>
             </table>
         </div>
     </main>
 
-    <!-- Hover Info Footer -->
-    <footer id="info-footer" style="height: 192px;" class="relative bg-white border-t p-4 shrink-0 flex flex-col shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] z-40">
-        <!-- Drag Handle -->
-        <div id="footer-resizer" class="absolute top-0 left-0 w-full h-1.5 cursor-row-resize bg-transparent hover:bg-indigo-400 transition-colors z-50"></div>
+    <footer id="info-footer" style="height: 192px;" class="relative bg-surface border-t border-border p-5 shrink-0 flex flex-col shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] z-40 transition-colors">
+        <div id="footer-resizer" class="absolute top-0 left-0 w-full h-1.5 cursor-row-resize bg-transparent hover:bg-accent-hover transition-colors z-50"></div>
         
-        <h2 id="desc-title" class="text-base font-bold text-gray-800 mt-1">Hover over a course to see its description.</h2>
-        <div class="flex gap-2 text-xs flex-wrap mt-1 mb-1" id="desc-tags"></div>
-        <p id="desc-content" class="text-gray-600 overflow-y-auto pr-2 text-sm leading-relaxed"></p>
+        <h2 id="desc-title" class="text-lg font-bold text-text-main mt-1">Hover over a course to see its description.</h2>
+        <div class="flex gap-2 text-sm flex-wrap mt-2 mb-2" id="desc-tags"></div>
+        <p id="desc-content" class="text-text-muted overflow-y-auto pr-2 text-base leading-relaxed"></p>
     </footer>
 
-    <!-- MODALS -->
-    
-    <!-- Course Modal -->
-    <div id="course-modal" class="fixed inset-0 modal-bg hidden flex items-center justify-center z-50">
-        <div class="bg-white rounded-xl shadow-2xl w-full max-w-lg overflow-hidden flex flex-col max-h-[90vh]">
-            <div class="px-6 py-4 border-b flex justify-between items-center bg-gray-50">
-                <h3 class="font-bold text-lg text-gray-800" id="course-modal-title">Add/Edit Course</h3>
-                <button onclick="UI.closeModals()" class="text-gray-400 hover:text-gray-600"><i class="ph ph-x text-xl"></i></button>
+    <div id="course-modal" class="fixed inset-0 bg-black/50 backdrop-blur-sm hidden flex items-center justify-center z-50">
+        <div class="bg-surface border border-border rounded-xl shadow-2xl w-full max-w-lg overflow-hidden flex flex-col max-h-[90vh]">
+            <div class="px-6 py-4 border-b border-border flex justify-between items-center bg-surface-alt">
+                <h3 class="font-bold text-lg text-text-main" id="course-modal-title">Add/Edit Course</h3>
+                <button onclick="UI.closeModals()" class="text-text-muted hover:text-text-main"><i class="ph ph-x text-xl"></i></button>
             </div>
             <div class="p-6 overflow-y-auto flex-1">
                 <form id="course-form" class="space-y-4">
                     <div class="flex gap-4">
                         <div class="w-1/3">
-                            <label class="block text-xs font-semibold text-gray-600 mb-1">Course ID *</label>
-                            <input type="text" id="course-id" required placeholder="e.g. AA583" class="w-full border rounded px-3 py-2 uppercase focus:ring-2 focus:ring-indigo-500 outline-none">
+                            <label class="block text-xs font-semibold text-text-muted mb-1">Course ID *</label>
+                            <input type="text" id="course-id" required placeholder="e.g. AA583" class="w-full bg-canvas border border-border text-text-main rounded px-3 py-2 uppercase focus:border-border-focus outline-none">
                         </div>
                         <div class="w-2/3">
-                            <label class="block text-xs font-semibold text-gray-600 mb-1">Title</label>
-                            <input type="text" id="course-title" placeholder="e.g. Advanced Aerodynamics" class="w-full border rounded px-3 py-2 focus:ring-2 focus:ring-indigo-500 outline-none">
+                            <label class="block text-xs font-semibold text-text-muted mb-1">Title</label>
+                            <input type="text" id="course-title" placeholder="e.g. Adv Aerodynamics" class="w-full bg-canvas border border-border text-text-main rounded px-3 py-2 focus:border-border-focus outline-none">
+                        </div>
+                    </div>
+                    <div class="flex gap-4">
+                        <div class="w-1/2">
+                            <label class="block text-xs font-semibold text-text-muted mb-1">Credit Hours</label>
+                            <input type="number" id="course-credits" value="3" min="0" class="w-full bg-canvas border border-border text-text-main rounded px-3 py-2 focus:border-border-focus outline-none">
+                        </div>
+                        <div class="w-1/2">
+                            <label class="block text-xs font-semibold text-text-muted mb-2">Header Color</label>
+                            <div class="flex items-center gap-3">
+                                <input type="text" id="course-color" data-coloris value="#ffffff" class="w-24 bg-canvas border border-border text-text-main rounded px-2 py-1.5 text-xs focus:border-border-focus outline-none cursor-pointer">
+                                <button type="button" onclick="UI.utils.setColoris('#course-color', '#ffffff')" class="text-xs px-2 py-1.5 bg-surface border border-border rounded shadow-sm hover:bg-surface-hover text-text-muted hover:text-text-main transition-colors flex items-center gap-1">
+                                    <i class="ph ph-eraser text-sm"></i> Clear
+                                </button>
+                            </div>
                         </div>
                     </div>
                     <div>
-                        <label class="block text-xs font-semibold text-gray-600 mb-1">Credit Hours</label>
-                        <input type="number" id="course-credits" value="3" min="0" class="w-full border rounded px-3 py-2 focus:ring-2 focus:ring-indigo-500 outline-none">
+                        <label class="block text-xs font-semibold text-text-muted mb-1">Immediate Prerequisites</label>
+                        <input type="text" id="course-prereqs" placeholder="e.g. MATH221, PHYS211" class="w-full bg-canvas border border-border text-text-main rounded px-3 py-2 uppercase focus:border-border-focus outline-none">
                     </div>
                     <div>
-                        <label class="block text-xs font-semibold text-gray-600 mb-1">Immediate Prerequisites (Comma separated IDs)</label>
-                        <input type="text" id="course-prereqs" placeholder="e.g. MATH221, PHYS211" class="w-full border rounded px-3 py-2 uppercase focus:ring-2 focus:ring-indigo-500 outline-none">
+                        <label class="block text-xs font-semibold text-text-muted mb-1">Concurrent Requirements</label>
+                        <input type="text" id="course-coreqs" placeholder="e.g. MATH231" class="w-full bg-canvas border border-border text-text-main rounded px-3 py-2 uppercase focus:border-border-focus outline-none">
                     </div>
                     <div>
-                        <label class="block text-xs font-semibold text-gray-600 mb-1">Concurrent Requirements (Comma separated IDs)</label>
-                        <input type="text" id="course-coreqs" placeholder="e.g. MATH231" class="w-full border rounded px-3 py-2 uppercase focus:ring-2 focus:ring-indigo-500 outline-none">
+                        <label class="block text-xs font-semibold text-text-muted mb-1">Jointly Offered</label>
+                        <input type="text" id="course-joint" placeholder="e.g. ME583" class="w-full bg-canvas border border-border text-text-main rounded px-3 py-2 uppercase focus:border-border-focus outline-none">
                     </div>
                     <div>
-                        <label class="block text-xs font-semibold text-gray-600 mb-1">Jointly Offered (Comma separated IDs)</label>
-                        <input type="text" id="course-joint" placeholder="e.g. ME583" class="w-full border rounded px-3 py-2 uppercase focus:ring-2 focus:ring-indigo-500 outline-none">
-                    </div>
-                    <div>
-                        <label class="block text-xs font-semibold text-gray-600 mb-1">Description</label>
-                        <textarea id="course-desc" rows="3" class="w-full border rounded px-3 py-2 focus:ring-2 focus:ring-indigo-500 outline-none"></textarea>
+                        <label class="block text-xs font-semibold text-text-muted mb-1">Description</label>
+                        <textarea id="course-desc" rows="3" class="w-full bg-canvas border border-border text-text-main rounded px-3 py-2 focus:border-border-focus outline-none"></textarea>
                     </div>
                 </form>
             </div>
-            <div class="px-6 py-4 border-t bg-gray-50 flex justify-end gap-3">
-                <button onclick="UI.closeModals()" class="px-4 py-2 border rounded text-gray-600 hover:bg-gray-100 font-medium">Cancel</button>
-                <button onclick="App.saveCourse()" class="px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700 font-medium shadow-sm">Save Course</button>
+            <div class="px-6 py-4 border-t border-border bg-surface-alt flex justify-end gap-3">
+                <button onclick="UI.closeModals()" class="px-4 py-2 border border-border bg-surface text-text-main rounded hover:bg-surface-hover font-medium">Cancel</button>
+                <button onclick="App.saveCourse()" class="px-4 py-2 bg-accent text-white rounded hover:bg-accent-hover font-medium shadow-sm">Save Course</button>
             </div>
         </div>
     </div>
 
-    <!-- Term Modal -->
-    <div id="term-modal" class="fixed inset-0 modal-bg hidden flex items-center justify-center z-50">
-        <div class="bg-white rounded-xl shadow-2xl w-full max-w-sm overflow-hidden flex flex-col">
-            <div class="px-6 py-4 border-b flex justify-between items-center bg-gray-50">
-                <h3 class="font-bold text-lg text-gray-800">Add/Edit Term</h3>
-                <button onclick="UI.closeModals()" class="text-gray-400 hover:text-gray-600"><i class="ph ph-x text-xl"></i></button>
+    <div id="term-modal" class="fixed inset-0 bg-black/50 backdrop-blur-sm hidden flex items-center justify-center z-50">
+        <div class="bg-surface border border-border rounded-xl shadow-2xl w-full max-w-sm overflow-hidden flex flex-col">
+            <div class="px-6 py-4 border-b border-border flex justify-between items-center bg-surface-alt">
+                <h3 class="font-bold text-lg text-text-main">Add/Edit Term</h3>
+                <button onclick="UI.closeModals()" class="text-text-muted hover:text-text-main"><i class="ph ph-x text-xl"></i></button>
             </div>
-            <div class="p-6">
-                <label class="block text-xs font-semibold text-gray-600 mb-1">Term Name</label>
-                <input type="text" id="term-name" data-id="" placeholder="e.g. Fall 2026" class="w-full border rounded px-3 py-2 focus:ring-2 focus:ring-indigo-500 outline-none" onkeydown="if(event.key==='Enter') App.saveTerm()">
+            <div class="p-6 space-y-5">
+                <div>
+                    <label class="block text-xs font-semibold text-text-muted mb-1">Term Name</label>
+                    <input type="text" id="term-name" data-id="" placeholder="e.g. WIN 27" class="w-full bg-canvas border border-border text-text-main rounded px-3 py-2 focus:border-border-focus outline-none" onkeydown="if(event.key==='Enter') App.saveTerm()">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-text-muted mb-2">Header Background Color</label>
+                    <div class="flex items-center gap-3">
+                        <input type="text" id="term-color" data-coloris value="#ffffff" class="w-24 bg-canvas border border-border text-text-main rounded px-2 py-1.5 text-xs focus:border-border-focus outline-none cursor-pointer">
+                        <button type="button" onclick="UI.utils.setColoris('#term-color', '#ffffff')" class="text-xs px-2 py-1.5 bg-surface border border-border rounded shadow-sm hover:bg-surface-hover text-text-muted hover:text-text-main transition-colors flex items-center gap-1">
+                            <i class="ph ph-eraser text-sm"></i> Clear
+                        </button>
+                    </div>
+                </div>
             </div>
-            <div class="px-6 py-4 border-t bg-gray-50 flex justify-end gap-3">
-                <button onclick="UI.closeModals()" class="px-4 py-2 border rounded text-gray-600 hover:bg-gray-100 font-medium">Cancel</button>
-                <button onclick="App.saveTerm()" class="px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700 font-medium shadow-sm">Save Term</button>
+            <div class="px-6 py-4 border-t border-border bg-surface-alt flex justify-end gap-3">
+                <button onclick="UI.closeModals()" class="px-4 py-2 border border-border bg-surface text-text-main rounded hover:bg-surface-hover font-medium">Cancel</button>
+                <button onclick="App.saveTerm()" class="px-4 py-2 bg-accent text-white rounded hover:bg-accent-hover font-medium shadow-sm">Save Term</button>
             </div>
         </div>
     </div>
 
-    <!-- Export Modal (Bypasses iframe download restrictions)
-    <div id="export-modal" class="fixed inset-0 modal-bg hidden flex items-center justify-center z-50">
-        <div class="bg-white rounded-xl shadow-2xl w-full max-w-lg overflow-hidden flex flex-col">
-            <div class="px-6 py-4 border-b flex justify-between items-center bg-gray-50">
-                <h3 class="font-bold text-lg text-gray-800">Export Curriculum Map</h3>
-                <button onclick="UI.closeModals()" class="text-gray-400 hover:text-gray-600"><i class="ph ph-x text-xl"></i></button>
-            </div>
+    <div id="confirm-modal" class="fixed inset-0 bg-black/50 backdrop-blur-sm hidden flex items-center justify-center z-[60]">
+        <div class="bg-surface border border-border rounded-xl shadow-2xl w-full max-w-sm overflow-hidden flex flex-col">
             <div class="p-6">
-                <p class="text-xs text-gray-600 mb-2">Copy the JSON below to save your map locally.</p>
-                <textarea id="export-data" rows="8" class="w-full border rounded px-3 py-2 text-xs font-mono bg-gray-50 focus:outline-none" readonly></textarea>
+                <h3 class="font-bold text-lg text-text-main mb-2" id="confirm-title">Confirm</h3>
+                <p class="text-text-muted text-sm" id="confirm-message">Are you sure?</p>
             </div>
-            <div class="px-6 py-4 border-t bg-gray-50 flex justify-end gap-3">
-                <button onclick="UI.closeModals()" class="px-4 py-2 border rounded text-gray-600 hover:bg-gray-100 font-medium">Close</button>
-                <button onclick="Storage.copyExport()" class="px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700 font-medium shadow-sm flex items-center gap-2"><i class="ph ph-copy"></i> Copy to Clipboard</button>
-            </div>
-        </div>
-    </div> -->
-
-    <!-- Confirm Modal (Bypasses browser confirm() blocks) -->
-    <div id="confirm-modal" class="fixed inset-0 modal-bg hidden flex items-center justify-center z-[60]">
-        <div class="bg-white rounded-xl shadow-2xl w-full max-w-sm overflow-hidden flex flex-col">
-            <div class="p-6">
-                <h3 class="font-bold text-lg text-gray-800 mb-2" id="confirm-title">Confirm</h3>
-                <p class="text-gray-600 text-sm" id="confirm-message">Are you sure?</p>
-            </div>
-            <div class="px-6 py-4 border-t bg-gray-50 flex justify-end gap-3">
-                <button onclick="UI.closeConfirm()" class="px-4 py-2 border rounded text-gray-600 hover:bg-gray-100 font-medium">Cancel</button>
+            <div class="px-6 py-4 border-t border-border bg-surface-alt flex justify-end gap-3">
+                <button onclick="UI.closeConfirm()" class="px-4 py-2 border border-border bg-surface text-text-main rounded hover:bg-surface-hover font-medium">Cancel</button>
                 <button id="confirm-btn" class="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 font-medium shadow-sm">Confirm</button>
             </div>
         </div>
     </div>
 
-    <!-- Alert Modal (Bypasses browser alert() blocks) -->
-    <div id="alert-modal" class="fixed inset-0 modal-bg hidden flex items-center justify-center z-[70]">
-        <div class="bg-white rounded-xl shadow-2xl w-full max-w-sm overflow-hidden flex flex-col">
-            <div class="p-6 text-center">
-                <i class="ph ph-warning-circle text-4xl text-orange-500 mb-2 inline-block"></i>
-                <p class="text-gray-800 text-sm font-medium" id="alert-message">Notice</p>
-            </div>
-            <div class="px-6 py-4 border-t bg-gray-50 flex justify-center">
-                <button onclick="UI.closeAlert()" class="px-6 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700 font-medium shadow-sm">OK</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- External Script -->
     <script src="app.js"></script>
 </body>
 </html>
