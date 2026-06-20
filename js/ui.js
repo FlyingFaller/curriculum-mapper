@@ -132,16 +132,32 @@ export const UI = {
         }
         
         // --- 1. HEADER RENDERING ---
+        
+        // Calculate total hours for the entire course bank (first column)
+        let totalBankCredits = Object.values(State.courses).reduce((sum, course) => sum + (course.credits || 0), 0);
+
         let headerHTML = `<tr class="bg-surface">
         <th class="cell-size sticky-col px-3 py-2 z-30 border-b border-border bg-surface-alt">
-            <div class="font-bold fs-header">${UI.compactMode ? 'Course Bank' : 'Courses'}</div>
+            <div class="font-bold fs-header" title="${UI.compactMode ? 'Course Bank' : 'Courses'}">${UI.compactMode ? 'Course Bank' : 'Courses'}</div>
+            <div class="text-xs font-normal opacity-80 mt-0.5">${totalBankCredits} hours</div>
         </th>`;
         
         State.terms.forEach((term) => {
+            // Calculate active, un-hidden hours specifically for this term
+            let termCredits = 0;
+            Object.keys(State.schedule).forEach(cId => {
+                const cell = State.schedule[cId]?.[term.id];
+                if (cell && cell.active && !cell.hidden) {
+                    const cData = State.courses[cId];
+                    if (cData) termCredits += (cData.credits || 0);
+                }
+            });
+
             let styleStr = term.color ? `background-color: ${term.color}; color: ${UI.utils.getContrastColor(term.color)};` : `background-color: var(--bg-surface);`;
             
             headerHTML += `<th style="${styleStr}" class="cell-size px-3 py-2 font-bold border-r border-border group text-left border-b">
                 <div class="truncate w-full pr-8 fs-header" title="${term.name}">${term.name}</div>
+                <div class="text-xs font-normal opacity-80 mt-0.5">${termCredits} hours</div>
                 <div class="absolute top-1 right-1 opacity-0 group-hover:opacity-100 flex bg-surface shadow-md border border-border rounded overflow-hidden z-50">
                     <button onclick="UI.editTerm('${term.id}')" class="w-7 h-7 flex items-center justify-center text-text-main hover:text-accent hover:bg-surface-hover transition-colors"><i class="ph ph-pencil-simple fs-icon leading-none"></i></button>
                     <button onclick="App.deleteTerm('${term.id}')" class="w-7 h-7 flex items-center justify-center text-text-main hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30 transition-colors"><i class="ph ph-trash fs-icon leading-none"></i></button>
