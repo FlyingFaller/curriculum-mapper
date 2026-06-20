@@ -28,8 +28,7 @@
     /* Husky Inspired Light Theme Backgrounds */
     --bg-canvas       : #f8f7fa;     
     --bg-surface      : #ffffff;     
-    --bg-surface-hover: #f0eef5;
-    --bg-surface-mid  : #faf9fc; /* NEW: Midpoint color */     
+    --bg-surface-hover: #f0eef5;     
     --bg-surface-alt  : #e9e6f0;     
     
     /* Typography */
@@ -60,7 +59,6 @@
     /* Backgrounds */
     --bg-canvas       : #0e0b14;     
     --bg-surface      : #18141f;     
-    --bg-surface-mid  : #1d1825; /* NEW: Midpoint color */
     --bg-surface-alt  : #2b2438;     
     --bg-surface-hover: #241e2e;     
     
@@ -102,37 +100,20 @@ body { font-family: "Source Sans Pro", -apple-system, BlinkMacSystemFont, "Segoe
     border-color: var(--border-color);
 }
 
-/* =========================================
-   TABLE & GRID LAYOUT ENFORCEMENT
-   ========================================= */
+/* Sticky Table Configuration */
 .table-container {
     max-height: calc(100vh - 250px);
     overflow: auto;
 }
 
-table { 
-    border-collapse: separate; 
-    border-spacing: 0; 
-    border: 1px solid var(--border-color);
-    table-layout: fixed; /* Crucial for alignment */
-    width: max-content;
-}
-
-/* Unified strict sizing for perfect column alignment */
-.cell-size {
-    width: 13rem;
-    min-width: 13rem;
-    max-width: 13rem;
-    box-sizing: border-box;
-}
+table { border-collapse: separate; border-spacing: 0; border: 1px solid var(--border-color); }
 
 thead th {
     position: sticky;
-    top: -1px; 
+    top: -1px; /* Prevents 1px gap bleed on vertical scroll */
     z-index: 20;
-    box-shadow: 0 1px 0 0 var(--border-color); 
+    box-shadow: 0 1px 0 0 var(--border-color); /* Reliable bottom border when scrolling */
     background-clip: padding-box;
-    height: 3.5rem; /* Fixes Bug 3: Locks header height across all modes */
 }
 
 .sticky-col {
@@ -148,10 +129,7 @@ thead th.sticky-col {
     box-shadow: inset -1px 0 0 var(--border-color), 0 1px 0 0 var(--border-color), 2px 0 4px -2px rgba(0, 0, 0, 0.05);
 }
 
-
-/* =========================================
-   COURSE CARDS & HIGHLIGHTS
-   ========================================= */
+/* --- Course Cards & Grid --- */
 .course-card {
     transition: background-color 0s;
     width: 100%;
@@ -161,10 +139,21 @@ thead th.sticky-col {
     color: var(--text-main);
     background-color: transparent;
 }
-
 .course-card.hidden-instance {
     opacity: 0.4;
     filter: grayscale(100%);
+}
+
+/* Compact Mode Overrides */
+.compact-mode-card {
+    height: 5.5rem;
+    background-color: var(--bg-surface);
+    border: 1px solid var(--border-color);
+    border-radius: 0.375rem;
+    box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+}
+.compact-mode-card:hover {
+    background-color: var(--bg-surface-hover);
 }
 
 /* Highlight Classes applied by JS */
@@ -178,35 +167,30 @@ thead th.sticky-col {
 .hl-err-temp { background-color: var(--color-err-temp) !important; color: #ffffff !important; border-color: #ef4444 !important; }
 .hl-err-miss { background-color: var(--color-err-miss) !important; color: #ffffff !important; border-color: #991b1b !important; }
 
-
-/* =========================================
-   COMPACT MODE / COURSE BANK STYLES
-   ========================================= */
-table.compact-table {
-    height: 100%; 
-    box-sizing: border-box; /* Enforces strict sizing so borders don't cause overflow */
+/* Grid Cells (Enlarged by ~40%) */
+.grid-cell { 
+    min-width: 10rem; max-width: 10rem; height: 5.5rem; padding: 0; 
+    vertical-align: top; 
+    border-right: 1px solid var(--border-color); 
+    border-bottom: 1px solid var(--border-color); 
+    background-color: var(--bg-surface); 
+    transition: background 0s; overflow: hidden; 
 }
+.grid-cell:hover { background-color: var(--bg-surface-hover); }
 
-.compact-mode-card {
-    height: 5.5rem;
-    background-color: var(--bg-surface);
-    border: 1px solid var(--border-color);
-    border-radius: 0.375rem;
-    box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-}
-
-.compact-mode-card:hover {
-    background-color: var(--bg-surface-hover);
-}
-
+/* --- Course Bank & Compact Mode Styles --- */
 .course-bank-cell {
+    height: 1px; /* Forces cell to take minimum possible height based on sibling cells */
     padding: 0 !important;
 }
 
 .course-bank-container {
-    /* Isolates scrolling to just this column, stretches perfectly with the new 100% height */
+    /* Isolates scrolling to just this column, preventing it from stretching the row height */
     position: absolute;
-    top: 0; left: 0; right: 0; bottom: 0;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
     overflow-y: auto;
     padding: 0.5rem;
 }
@@ -218,33 +202,10 @@ table.compact-table {
     transition: transform 0.1s, box-shadow 0.1s;
 }
 
-/* The Bottom Editor Row */
-.sticky-bottom-row {
-    position: sticky;
-    bottom: -1px;
-    z-index: 45; 
-    box-shadow: 0 -2px 10px rgba(0,0,0,0.05);
-    height: 1px; /* Fixes Bug 1: Forces the row to shrink tightly around the cards */
-}
-
-.sticky-bottom-row td {
-    background-color: var(--bg-surface); /* Updated to --bg-surface (#18141f) */
-    box-shadow: inset -1px 0 0 0 var(--border-color), inset 0 1px 0 0 var(--border-color) !important;
-    border: none !important; 
-    padding: 0.5rem !important;
-    height: inherit; 
-}
-
-.sticky-bottom-row td.sticky-col {
-    z-index: 50; 
-    background-color: var(--bg-surface);
-    box-shadow: inset -1px 0 0 0 var(--border-color), inset 0 1px 0 0 var(--border-color), 2px 0 4px -2px rgba(0, 0, 0, 0.05) !important;
-}
-
-/* Target Zones inside the Editor */
 .edit-target-zone {
-    height: 5.5rem; /* Changed to match .compact-mode-card height */
-    border: 2px dashed var(--border-color);
+    height: 100%; 
+    min-height: 5.5rem;
+    border: 1px dashed var(--border-color);
     border-radius: 0.375rem;
     display: flex;
     flex-direction: column;
@@ -253,21 +214,30 @@ table.compact-table {
     color: var(--text-muted);
     cursor: pointer;
     transition: all 0.2s;
-    background-color: var(--bg-canvas);
+    background-color: transparent;
 }
 
 .edit-target-zone:hover {
-    border-color: var(--accent-main);
-    color: var(--accent-main);
-    background-color: var(--bg-surface);
-}
-
-.edit-target-zone.active-zone {
     border-style: solid;
-    border-color: #22c55e; 
-    background-color: #f0fdf4; 
+    border-color: var(--text-muted);
+    color: var(--text-main);
+    background-color: var(--bg-surface-hover);
 }
 
-.dark .edit-target-zone.active-zone {
-    background-color: rgba(34, 197, 94, 0.1);
+.sticky-bottom-row {
+    position: sticky;
+    bottom: -1px;
+    z-index: 45; /* Elevated to stay above standard grid rows */
+}
+
+.sticky-bottom-row td {
+    background-color: var(--bg-surface);
+    box-shadow: inset -1px 0 0 0 var(--border-color), inset 0 2px 0 0 var(--border-color) !important;
+    border: none !important; /* Prevents visual conflicts with standard cell borders */
+}
+
+.sticky-bottom-row td.sticky-col {
+    z-index: 50; 
+    /* Right border, Top border, and the outer drop shadow for overlapping */
+    box-shadow: inset -1px 0 0 0 var(--border-color), inset 0 2px 0 0 var(--border-color), 2px 0 4px -2px rgba(0, 0, 0, 0.05) !important;
 }

@@ -230,6 +230,10 @@ const HoverEngine = {
 
 // 4. UI/DOM MANAGEMENT
 const UI = {
+
+    compactMode: false,
+    selectedCourseId: null,
+
     utils: {
         sanitizeId: (str) => str.toUpperCase().replace(/\s+/g, '').replace(/[^A-Z0-9_-]/g, ''),
         parseList: (str) => str.split(',').map(s => s.trim().toUpperCase().replace(/\s+/g, '')).filter(s => s.length > 0),
@@ -248,6 +252,62 @@ const UI = {
                 input.dispatchEvent(new Event('input', { bubbles: true }));
             }
         }
+    },
+
+    generateCourseCardHTML(course, term, isHidden, isBankCard = false) {
+        const hiddenClass = isHidden ? 'hidden-instance' : '';
+        const eyeIcon = isHidden ? 'ph-eye-slash' : 'ph-eye';
+        const compactClass = UI.compactMode ? 'compact-mode-card shrink-0' : '';
+        
+        // Highlight logic for the Bank
+        const selectedClass = (isBankCard && course.id === UI.selectedCourseId) ? 'selected-card' : '';
+        
+        // Apply custom colors to Bank cards, or leave as default
+        let cStyleStr = (isBankCard && course.color) ? `background-color: ${course.color}; color: ${UI.utils.getContrastColor(course.color)};` : ``;
+
+        // Click handlers: Bank cards Select, Grid cards prevent propagation
+        let onClickHandler = isBankCard 
+            ? `onclick="App.selectCourse('${course.id}')"` 
+            : `onclick="event.stopPropagation()"`;
+        
+        // Action Buttons: Bank cards get Edit/Delete, Grid cards get Hide/Remove
+        let actionButtons = isBankCard 
+            ? `
+            <button class="w-7 h-7 flex items-center justify-center text-text-main hover:text-accent hover:bg-surface-hover transition-colors" onclick="event.stopPropagation(); UI.editCourse('${course.id}')" title="Edit Course">
+                <i class="ph ph-pencil-simple fs-icon leading-none"></i>
+            </button>
+            <button class="w-7 h-7 flex items-center justify-center text-text-main hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30 transition-colors" onclick="event.stopPropagation(); App.deleteCourse('${course.id}')" title="Delete Course">
+                <i class="ph ph-trash fs-icon leading-none"></i>
+            </button>
+            `
+            : `
+            <button class="w-7 h-7 flex items-center justify-center text-text-main hover:text-accent hover:bg-surface-hover transition-colors" onclick="App.toggleHidden(event, '${course.id}', '${term.id}')" title="Toggle active status">
+                <i class="ph ${eyeIcon} fs-icon leading-none"></i>
+            </button>
+            <button class="w-7 h-7 flex items-center justify-center text-text-main hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30 transition-colors" onclick="App.removeCard(event, '${course.id}', '${term.id}')" title="Remove from term">
+                <i class="ph ph-x fs-icon leading-none"></i>
+            </button>
+            `;
+
+        return `
+            <div style="${cStyleStr}" class="course-card ${compactClass} ${hiddenClass} ${selectedClass} card-node flex flex-col justify-between group/card relative overflow-hidden" 
+                 data-cid="${course.id}" data-tid="${term ? term.id : 'bank'}"
+                 onmouseenter="UI.handleMouseOver('${course.id}', '${term ? term.id : 'bank'}')"
+                 onmouseleave="UI.handleMouseOut()"
+                 ${onClickHandler}>
+                 
+                 <div class="flex flex-col w-full">
+                    <span class="font-bold fs-course-id leading-tight truncate pr-8">${course.id} <span class="font-normal fs-course-credits">(${course.credits})</span></span>
+                    <div class="fs-course-title truncate leading-tight mt-0.5">${course.title}</div>
+                 </div>
+                 
+                 ${course.joint.length ? `<div class="fs-course-joint mt-auto font-medium opacity-80 truncate leading-tight pb-0.5 italic">Joint: ${course.joint.join(', ')}</div>` : `<div class="mt-auto"></div>`}
+                 
+                 <div class="absolute top-1 right-1 flex opacity-0 group-hover/card:opacity-100 transition-opacity z-50 bg-surface shadow-md border border-border rounded overflow-hidden">
+                    ${actionButtons}
+                 </div>
+            </div>
+        `;
     },
 
     initColoris() {
@@ -295,15 +355,18 @@ const UI = {
         const thead = document.getElementById('table-head');
         const tbody = document.getElementById('table-body');
         
-        let headerHTML = `<tr class="bg-surface">
-            <th class="sticky-col px-3 py-2 min-w-[12rem] max-w-[12rem] z-30 border-b border-border bg-surface">
-                <div class="font-bold fs-header">Courses</div>
-            </th>`;
+        let headerHTML = `<tr class="bg-surface">`;
+        
+        // We ALWAYS render the first column header now
+        headerHTML += `
+        <th class="sticky-col px-3 py-2 min-w-[10rem] max-w-[10rem] z-30 border-b border-border bg-surface">
+            <div class="font-bold fs-header">${UI.compactMode ? 'Course Bank' : 'Courses'}</div>
+        </th>`;
         
         State.terms.forEach((term) => {
             let styleStr = term.color ? `background-color: ${term.color}; color: ${UI.utils.getContrastColor(term.color)};` : `background-color: var(--bg-surface);`;
             
-            headerHTML += `<th style="${styleStr}" class="px-3 py-2 font-bold min-w-[10rem] max-w-[10rem] border-r border-border relative group text-left border-b">
+            headerHTML += `<th style="${styleStr}" class="px-3 py-2 font-bold min-w-[10rem] max-w-[10rem] border-r border-border group text-left border-b">
                 <div class="truncate w-full pr-8 fs-header">${term.name}</div>
                 <div class="absolute top-1 right-1 opacity-0 group-hover:opacity-100 flex bg-surface shadow-md border border-border rounded overflow-hidden z-50">
                     <button onclick="UI.editTerm('${term.id}')" class="w-7 h-7 flex items-center justify-center text-text-main hover:text-accent hover:bg-surface-hover transition-colors"><i class="ph ph-pencil-simple fs-icon leading-none"></i></button>
@@ -317,62 +380,117 @@ const UI = {
         let bodyHTML = '';
         const sortedCourses = Object.values(State.courses).sort((a,b) => a.id.localeCompare(b.id));
 
-        sortedCourses.forEach(course => {
-            bodyHTML += `<tr class="hover:bg-surface-hover transition-colors" data-course-row="${course.id}">`;
+        if (UI.compactMode) {
             
-            let cStyleStr = course.color ? `background-color: ${course.color}; color: ${UI.utils.getContrastColor(course.color)};` : `background-color: var(--bg-surface);`;
-
-            bodyHTML += `
-                <td style="${cStyleStr}" class="sticky-col px-3 py-2 align-top group border-b border-border">
-                    <div class="flex justify-between items-start relative">
-                        <span class="font-bold fs-course-id leading-tight truncate pr-8">${course.id} <span class="font-normal fs-course-credits opacity-80">(${course.credits})</span></span>
-                        <div class="absolute top-1 right-1 opacity-0 group-hover:opacity-100 flex bg-surface shadow-md border border-border rounded overflow-hidden z-50">
-                            <button onclick="UI.editCourse('${course.id}')" class="w-7 h-7 flex items-center justify-center text-text-main hover:text-accent hover:bg-surface-hover transition-colors"><i class="ph ph-pencil-simple fs-icon leading-none"></i></button>
-                            <button onclick="App.deleteCourse('${course.id}')" class="w-7 h-7 flex items-center justify-center text-text-main hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30 transition-colors"><i class="ph ph-trash fs-icon leading-none"></i></button>
-                        </div>
-                    </div>
-                    <div class="fs-course-title opacity-90 truncate leading-tight mt-0.5" title="${course.title}">${course.title}</div>
-                </td>`;
-
+            // --- 1. THE MAIN COMPACT GRID ---
+            bodyHTML += `<tr>`;
+            
+            // Col 1: Course Bank Sidebar (Isolated Scroll)
+            bodyHTML += `<td class="course-bank-cell sticky-col align-top border-r border-b border-border bg-surface min-w-[10rem] max-w-[10rem]">
+                <div class="h-full relative w-full min-h-[calc(100vh-420px)]">
+                    <div class="course-bank-container flex flex-col gap-2 w-full">`;
+            sortedCourses.forEach(course => {
+                bodyHTML += UI.generateCourseCardHTML(course, null, false, true);
+            });
+            bodyHTML += `</div></div></td>`;
+            
+            // Cols 2..N: Term Stacks
             State.terms.forEach(term => {
-                const cellData = State.schedule[course.id]?.[term.id];
-                const isActive = cellData?.active;
-                const isHidden = cellData?.hidden;
+                bodyHTML += `<td class="grid-cell p-2 align-top !h-auto  border-b bg-surface min-w-[10rem] max-w-[10rem]">
+                    <div class="flex flex-col gap-2 min-h-[5.5rem] w-full">`;
                 
-                bodyHTML += `<td class="grid-cell relative" onclick="App.toggleCell('${course.id}', '${term.id}')">`;
-                
-                if (isActive) {
-                    const hiddenClass = isHidden ? 'hidden-instance' : '';
-                    const eyeIcon = isHidden ? 'ph-eye-slash' : 'ph-eye';
+                sortedCourses.forEach(course => {
+                    // Pull the instances out of the main grid if they are actively being edited
+                    if (course.id === UI.selectedCourseId) return;
                     
-                    bodyHTML += `
-                        <div class="course-card ${hiddenClass} card-node flex flex-col justify-between group/card relative overflow-hidden" 
-                             data-cid="${course.id}" data-tid="${term.id}"
-                             onmouseenter="UI.handleMouseOver('${course.id}', '${term.id}')"
-                             onmouseleave="UI.handleMouseOut()">
-                             
-                             <div class="flex flex-col w-full">
-                                <span class="font-bold fs-course-id leading-tight truncate pr-8">${course.id} <span class="font-normal fs-course-credits">(${course.credits})</span></span>
-                                <div class="fs-course-title truncate leading-tight mt-0.5">${course.title}</div>
-                             </div>
-                             
-                             ${course.joint.length ? `<div class="fs-course-joint mt-auto font-medium opacity-80 truncate leading-tight pb-0.5 italic">Joint: ${course.joint.join(', ')}</div>` : `<div class="mt-auto"></div>`}
-                             
-                             <div class="absolute top-1 right-1 flex opacity-0 group-hover/card:opacity-100 transition-opacity z-50 bg-surface shadow-md border border-border rounded overflow-hidden">
-                                <button class="w-7 h-7 flex items-center justify-center text-text-main hover:text-accent hover:bg-surface-hover transition-colors" onclick="App.toggleHidden(event, '${course.id}', '${term.id}')" title="Toggle active status">
-                                    <i class="ph ${eyeIcon} fs-icon leading-none"></i>
-                                </button>
-                                <button class="w-7 h-7 flex items-center justify-center text-text-main hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30 transition-colors" onclick="App.removeCard(event, '${course.id}', '${term.id}')" title="Remove from term">
-                                    <i class="ph ph-x fs-icon leading-none"></i>
-                                </button>
-                             </div>
-                        </div>
-                    `;
-                }
-                bodyHTML += `</td>`;
+                    const cellData = State.schedule[course.id]?.[term.id];
+                    if (cellData?.active) {
+                        bodyHTML += UI.generateCourseCardHTML(course, term, cellData.hidden, false);
+                    }
+                });
+                
+                bodyHTML += `</div></td>`;
             });
             bodyHTML += `</tr>`;
-        });
+
+            // --- 2. THE ACTIVE EDITING ROW (Pinned to Bottom) ---
+            if (UI.selectedCourseId && State.courses[UI.selectedCourseId]) {
+                const activeCourse = State.courses[UI.selectedCourseId];
+                let activeCourseStyle = activeCourse.color ? `background-color: ${activeCourse.color}; color: ${UI.utils.getContrastColor(activeCourse.color)};` : ``;
+                
+                bodyHTML += `<tr class="sticky-bottom-row">`;
+                
+                // Col 1: Bottom-left sticky corner (Renders the selected Card)
+                bodyHTML += `
+                    <td class="sticky-col p-2 align-middle border-r border-border min-w-[10rem] max-w-[10rem] bg-surface relative">
+                        <div style="${activeCourseStyle}" class="course-card compact-mode-card selected-card flex flex-col justify-between group/card relative overflow-hidden" onclick="App.selectCourse(null)">
+                            <div class="flex flex-col w-full">
+                                <span class="font-bold fs-course-id leading-tight truncate pr-8">${activeCourse.id} <span class="font-normal fs-course-credits opacity-80">(${activeCourse.credits})</span></span>
+                                <div class="fs-course-title opacity-90 truncate leading-tight mt-0.5" title="${activeCourse.title}">${activeCourse.title}</div>
+                            </div>
+                            ${activeCourse.joint.length ? `<div class="fs-course-joint mt-auto font-medium opacity-80 truncate leading-tight pb-0.5 italic">Joint: ${activeCourse.joint.join(', ')}</div>` : `<div class="mt-auto"></div>`}
+                            <div class="absolute top-1 right-1 flex z-50 bg-surface shadow-md border border-border rounded overflow-hidden">
+                                <button class="w-7 h-7 flex items-center justify-center text-text-main hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30 transition-colors" onclick="event.stopPropagation(); App.selectCourse(null)" title="Close Editor">
+                                    <i class="ph ph-x fs-icon leading-none"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </td>`;
+                
+                // Cols 2..N: Target Zones
+                State.terms.forEach(term => {
+                    const cellData = State.schedule[activeCourse.id]?.[term.id];
+                    const isActive = cellData?.active;
+                    
+                    // Added 'grid-cell' and 'border-r' to ensure vertical lines map down perfectly
+                    bodyHTML += `<td class="grid-cell p-2 align-top border-r border-border min-w-[10rem] max-w-[10rem]">`;
+                    if (isActive) {
+                        bodyHTML += UI.generateCourseCardHTML(activeCourse, term, cellData.hidden, false);
+                    } else {
+                        bodyHTML += `
+                            <div class="edit-target-zone" onclick="App.toggleCell('${activeCourse.id}', '${term.id}')">
+                                <i class="ph ph-plus text-xl mb-1"></i>
+                                <span class="text-[0.65rem] font-bold uppercase tracking-wider">Add</span>
+                            </div>
+                        `;
+                    }
+                    bodyHTML += `</td>`;
+                });
+                bodyHTML += `</tr>`;
+            }
+            
+        } else {
+            // NORMAL MODE: Matrix Grid
+            sortedCourses.forEach(course => {
+                bodyHTML += `<tr class="hover:bg-surface-hover transition-colors" data-course-row="${course.id}">`;
+                
+                let cStyleStr = course.color ? `background-color: ${course.color}; color: ${UI.utils.getContrastColor(course.color)};` : `background-color: var(--bg-surface);`;
+
+                bodyHTML += `
+                    <td style="${cStyleStr}" class="sticky-col px-3 py-2 align-top group border-b border-border min-w-[10rem] max-w-[10rem]">
+                        <div class="flex justify-between items-start relative">
+                            <span class="font-bold fs-course-id leading-tight truncate pr-8">${course.id} <span class="font-normal fs-course-credits opacity-80">(${course.credits})</span></span>
+                            <div class="absolute top-1 right-1 opacity-0 group-hover:opacity-100 flex bg-surface shadow-md border border-border rounded overflow-hidden z-50">
+                                <button onclick="UI.editCourse('${course.id}')" class="w-7 h-7 flex items-center justify-center text-text-main hover:text-accent hover:bg-surface-hover transition-colors"><i class="ph ph-pencil-simple fs-icon leading-none"></i></button>
+                                <button onclick="App.deleteCourse('${course.id}')" class="w-7 h-7 flex items-center justify-center text-text-main hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30 transition-colors"><i class="ph ph-trash fs-icon leading-none"></i></button>
+                            </div>
+                        </div>
+                        <div class="fs-course-title opacity-90 truncate leading-tight mt-0.5" title="${course.title}">${course.title}</div>
+                    </td>`;
+
+                State.terms.forEach(term => {
+                    const cellData = State.schedule[course.id]?.[term.id];
+                    const isActive = cellData?.active;
+                    
+                    bodyHTML += `<td class="grid-cell relative" onclick="App.toggleCell('${course.id}', '${term.id}')">`;
+                    if (isActive) {
+                        bodyHTML += UI.generateCourseCardHTML(course, term, cellData.hidden, false);
+                    }
+                    bodyHTML += `</td>`;
+                });
+                bodyHTML += `</tr>`;
+            });
+        }
         tbody.innerHTML = bodyHTML;
     },
 
@@ -488,6 +606,33 @@ const App = {
         UI.initColoris();
         UI.renderTable();
         UI.initResizer();
+    },
+
+    selectCourse(courseId) {
+        // Toggle selection off if clicking the already selected course
+        UI.selectedCourseId = (UI.selectedCourseId === courseId) ? null : courseId;
+        UI.renderTable();
+    },
+
+    toggleCompactMode() {
+        UI.compactMode = !UI.compactMode;
+        
+        // Clear active selections when escaping compact mode
+        if (!UI.compactMode) UI.selectedCourseId = null; 
+        
+        const btn = document.getElementById('compact-toggle');
+        const icon = btn.querySelector('i');
+        
+        if (UI.compactMode) {
+            icon.className = 'ph ph-rows text-xl';
+            btn.classList.add('text-accent');
+            btn.classList.remove('text-text-muted');
+        } else {
+            icon.className = 'ph ph-squares-four text-xl';
+            btn.classList.remove('text-accent');
+            btn.classList.add('text-text-muted');
+        }
+        UI.renderTable();
     },
 
     saveTerm() {
