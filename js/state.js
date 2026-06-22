@@ -2,6 +2,8 @@ export const State = {
     terms: [], 
     courses: {}, 
     schedule: {}, 
+    whitelist: [],
+    tags: [],
     
     initDefault() {
         this.terms = [
@@ -14,5 +16,7 @@ export const State = {
         ];
         this.courses = {};
         this.schedule = {};
+        this.whitelist = [];
+        this.tags = [];
     }
 };

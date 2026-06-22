@@ -14,6 +14,99 @@ const App = {
         UI.initColoris();
         UI.renderTable();
         UI.initResizer();
+
+        // NEW: Global listener to clear pins via Escape
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && UI.pinnedNode) {
+                App.clearPin();
+            }
+        });
+    },
+
+    saveTag() {
+        const idInput = document.getElementById('tag-edit-id').value;
+        const name = document.getElementById('tag-edit-name').value.trim();
+        const color = document.getElementById('tag-edit-color').value;
+        const icon = document.getElementById('tag-edit-icon-val').value || 'ph-circle';
+
+        if (!name) return alert("Tag name is required");
+
+        let newTagId = null; 
+
+        if (idInput) {
+            // Edit existing
+            const tag = State.tags.find(t => t.id === idInput);
+            if (tag) { 
+                tag.name = name; 
+                tag.color = color; 
+                tag.icon = icon; 
+            }
+        } else {
+            // Create new
+            newTagId = 'tag-' + Date.now();
+            State.tags.push({ id: newTagId, name, color, icon });
+        }
+
+        Storage.save();
+        UI.closeTagEditor();
+        
+        // Refresh whichever UI elements are currently visible
+        UI.renderGlobalTags(); 
+        
+        // Grab currently checked tags so we don't lose them when redrawing the form
+        const checkedBoxes = Array.from(document.querySelectorAll('.course-tag-checkbox:checked')).map(cb => cb.value);
+        
+        if (newTagId) {
+            checkedBoxes.push(newTagId);
+        }
+
+        UI.renderCourseTagsForm(checkedBoxes); 
+        UI.renderTable();
+    },
+
+    deleteTag(tagId) {
+        UI.showConfirm("Delete Tag", "Are you sure? This will remove the tag from all courses.", () => {
+            State.tags = State.tags.filter(t => t.id !== tagId);
+            // Scrub from all courses
+            Object.values(State.courses).forEach(c => {
+                c.tags = (c.tags || []).filter(t => t !== tagId);
+            });
+            Storage.save();
+            UI.renderGlobalTags();
+            UI.renderCourseTagsForm();
+            UI.renderTable();
+        });
+    },
+
+    saveWhitelist() {
+        const rawInput = document.getElementById('whitelist-input').value;
+        State.whitelist = UI.utils.parseList(rawInput);
+        Storage.save();
+        UI.closeModals();
+        UI.renderTable();
+    },
+
+    togglePin(event, courseId, termId) {
+        event.stopPropagation(); 
+
+        // If clicking the currently pinned card, unpin it
+        if (UI.pinnedNode && UI.pinnedNode.cId === courseId && UI.pinnedNode.tId === termId) {
+            this.clearPin();
+        } else {
+            // Pin the new card
+            UI.pinnedNode = { cId: courseId, tId: termId };
+            UI.renderTable(); // Re-render to apply the CSS selection ring
+            
+            // Because re-rendering destroys the old DOM nodes, we must manually 
+            // force the hover engine to reapply the CSS background highlights
+            UI.handleMouseOver(courseId, termId, true);
+        }
+    },
+
+    clearPin() {
+        UI.pinnedNode = null;
+        UI.renderTable();
+        UI.handleMouseOut();
     },
 
     selectCourse(courseId) {
@@ -104,6 +197,8 @@ const App = {
             });
         }
 
+        const selectedTags = Array.from(document.querySelectorAll('.course-tag-checkbox:checked')).map(cb => cb.value);
+
         State.courses[id] = {
             id: id,
             title: document.getElementById('course-title').value.trim(),
@@ -111,6 +206,7 @@ const App = {
             prereqs: UI.utils.parseList(document.getElementById('course-prereqs').value),
             coreqs: UI.utils.parseList(document.getElementById('course-coreqs').value),
             joint: UI.utils.parseList(document.getElementById('course-joint').value),
+            tags: selectedTags, // NEW: Save the tags array here!
             desc: document.getElementById('course-desc').value.trim(),
             color: color
         };
@@ -159,6 +255,30 @@ const App = {
             State.schedule[courseId][termId].hidden = !State.schedule[courseId][termId].hidden;
             Storage.save();
             UI.renderTable();
+        }
+    },
+
+    hideDeadEnds(event, courseId, termId) {
+        event.stopPropagation();
+        const { highlights } = HoverEngine.analyze(courseId, termId);
+        
+        let hiddenCount = 0;
+        
+        // Find all keys that were marked as dead ends (hl-err-temp)
+        for (const [key, highlightClass] of Object.entries(highlights)) {
+            if (highlightClass === 'hl-err-temp') {
+                const [targetCid, targetTid] = key.split('_');
+                if (State.schedule[targetCid] && State.schedule[targetCid][targetTid]) {
+                    State.schedule[targetCid][targetTid].hidden = true;
+                    hiddenCount++;
+                }
+            }
+        }
+
+        if (hiddenCount > 0) {
+            Storage.save();
+            UI.renderTable();
+            UI.handleMouseOver(courseId, termId, true); // UPDATED: Added true flag
         }
     },
 

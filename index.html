@@ -69,6 +69,12 @@
             <button onclick="App.hideErrors()" class="px-3 py-2 text-text-muted hover:text-red-500 transition" title="Hide Erroneous Cards">
                 <i class="ph ph-magic-wand text-xl"></i>
             </button>
+            <button onclick="UI.openWhitelistModal()" class="px-3 py-2 text-text-muted hover:text-accent transition" title="Manage Global Whitelist">
+                <i class="ph ph-shield-check text-xl"></i>
+            </button>
+            <button onclick="UI.openTagManager()" class="px-3 py-2 text-text-muted hover:text-accent transition" title="Manage Global Tags">
+                <i class="ph ph-tag text-xl"></i>
+            </button>
             <button onclick="App.resetMap()" class="px-3 py-2 text-text-muted hover:text-red-500 transition" title="Reset Schedule">
                 <i class="ph ph-arrow-counter-clockwise text-xl"></i>
             </button>
@@ -157,6 +163,16 @@
                         <input type="text" id="course-joint" placeholder="e.g. ME583" class="w-full bg-canvas border border-border text-text-main rounded px-3 py-2 uppercase focus:border-border-focus outline-none">
                     </div>
                     <div>
+                        <div class="flex justify-between items-end mb-1">
+                            <label class="block text-xs font-semibold text-text-muted">Tags</label>
+                            <button type="button" onclick="UI.openTagEditor()" class="text-xs text-accent hover:text-accent-hover font-medium flex items-center gap-1">
+                                <i class="ph ph-plus"></i> Create Tag
+                            </button>
+                        </div>
+                        <div id="course-tags-container" class="flex flex-wrap gap-2 p-2 bg-canvas border border-border rounded min-h-[2.5rem]">
+                            </div>
+                    </div>
+                    <div>
                         <label class="block text-xs font-semibold text-text-muted mb-1">Description</label>
                         <textarea id="course-desc" rows="3" class="w-full bg-canvas border border-border text-text-main rounded px-3 py-2 focus:border-border-focus outline-none"></textarea>
                     </div>
@@ -206,6 +222,70 @@
             <div class="px-6 py-4 border-t border-border bg-surface-alt flex justify-end gap-3">
                 <button onclick="UI.closeConfirm()" class="px-4 py-2 border border-border bg-surface text-text-main rounded hover:bg-surface-hover font-medium">Cancel</button>
                 <button id="confirm-btn" class="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 font-medium shadow-sm">Confirm</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="whitelist-modal" class="fixed inset-0 bg-black/50 backdrop-blur-sm hidden flex items-center justify-center z-50">
+        <div class="bg-surface border border-border rounded-xl shadow-2xl w-full max-w-md overflow-hidden flex flex-col max-h-[90vh]">
+            <div class="px-6 py-4 border-b border-border flex justify-between items-center bg-surface-alt">
+                <h3 class="font-bold text-lg text-text-main">Global Whitelist</h3>
+                <button onclick="UI.closeModals()" class="text-text-muted hover:text-text-main"><i class="ph ph-x text-xl"></i></button>
+            </div>
+            <div class="p-6 overflow-y-auto">
+                <label class="block text-xs font-semibold text-text-main mb-1">Ignored Prerequisites & Corequisites</label>
+                <p class="text-xs text-text-muted mb-3 leading-relaxed">Enter a comma-separated list of course IDs. The hover engine will completely ignore these courses when checking for missing or timing errors.</p>
+                <textarea id="whitelist-input" rows="4" placeholder="e.g. MATH124, PHYS121" class="w-full bg-canvas border border-border text-text-main rounded px-3 py-2 uppercase focus:border-border-focus outline-none"></textarea>
+            </div>
+            <div class="px-6 py-4 border-t border-border bg-surface-alt flex justify-end gap-3">
+                <button onclick="UI.closeModals()" class="px-4 py-2 border border-border bg-surface text-text-main rounded hover:bg-surface-hover font-medium">Cancel</button>
+                <button onclick="App.saveWhitelist()" class="px-4 py-2 bg-accent text-white rounded hover:bg-accent-hover font-medium shadow-sm">Save Whitelist</button>
+            </div>
+            
+        </div>
+    </div>
+
+    <div id="tag-manager-modal" class="fixed inset-0 bg-black/50 backdrop-blur-sm hidden flex items-center justify-center z-50">
+        <div class="bg-surface border border-border rounded-xl shadow-2xl w-full max-w-sm overflow-hidden flex flex-col max-h-[90vh]">
+            <div class="px-6 py-4 border-b border-border flex justify-between items-center bg-surface-alt">
+                <h3 class="font-bold text-lg text-text-main">Global Tags</h3>
+                <button onclick="UI.closeModals()" class="text-text-muted hover:text-text-main"><i class="ph ph-x text-xl"></i></button>
+            </div>
+            <div class="p-6 flex flex-col">
+                <div id="global-tags-list" class="flex flex-col gap-2 overflow-y-auto max-h-[40vh] pr-1">
+                </div>
+                <button onclick="UI.openTagEditor()" class="mt-3 w-full py-2 border border-dashed border-border rounded text-text-muted hover:border-accent hover:text-accent transition flex items-center justify-center gap-2 shrink-0">
+                    <i class="ph ph-plus"></i> Create New Tag
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div id="tag-editor-modal" class="fixed inset-0 bg-black/40 hidden flex items-center justify-center z-[60]">
+        <div class="bg-surface border border-border rounded-xl shadow-2xl w-full max-w-xs overflow-hidden flex flex-col">
+            <div class="px-5 py-3 border-b border-border flex justify-between items-center bg-surface-alt">
+                <h3 id="tag-editor-title" class="font-bold text-md text-text-main">Create Tag</h3>
+            </div>
+            <div class="p-5 space-y-4">
+                <input type="hidden" id="tag-edit-id">
+                <input type="hidden" id="tag-edit-icon-val">
+                <div>
+                    <label class="block text-xs font-semibold text-text-muted mb-1">Tag Name</label>
+                    <input type="text" id="tag-edit-name" class="w-full bg-canvas border border-border text-text-main rounded px-3 py-2 focus:border-border-focus outline-none">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-text-muted mb-1">Color</label>
+                    <input type="text" id="tag-edit-color" data-coloris value="#3b82f6" oninput="UI.renderIconPicker()" class="w-full bg-canvas border border-border text-text-main rounded px-3 py-2 text-xs focus:border-border-focus outline-none cursor-pointer">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-text-muted mb-1">Icon</label>
+                    <div id="tag-edit-icons" class="grid grid-cols-6 gap-1 bg-canvas p-1.5 border border-border rounded max-h-32 overflow-y-auto">
+                        </div>
+                </div>
+            </div>
+            <div class="px-5 py-3 border-t border-border flex justify-end gap-2 bg-surface-alt">
+                <button onclick="UI.closeTagEditor()" class="px-3 py-1.5 border border-border text-text-main rounded hover:bg-surface-hover text-sm">Cancel</button>
+                <button onclick="App.saveTag()" class="px-3 py-1.5 bg-accent text-white rounded hover:bg-accent-hover text-sm shadow-sm">Save</button>
             </div>
         </div>
     </div>

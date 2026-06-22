@@ -20,9 +20,9 @@ export const HoverEngine = {
 
         if (hoverTermIdx === -1 || !State.courses[hoverCid]) return { highlights, status };
 
-        // --- NEW: HIGHLIGHT PRIORITY SYSTEM ---
-        // Prevents indirect relationships from overwriting direct ones in complex webs
+        // ADDED hl-err-temp as the highest priority to ensure dead ends are always visible
         const priority = {
+            'hl-err-temp': 5,
             'hl-imm-pre': 4,
             'hl-coreq': 3,
             'hl-post': 2,
@@ -30,12 +30,18 @@ export const HoverEngine = {
         };
 
         const setHighlight = (key, className) => {
-            // Only assign the highlight if the cell is currently empty, 
-            // OR if the new highlight has a higher priority than the existing one.
             if (!highlights[key] || priority[className] > priority[highlights[key]]) {
                 highlights[key] = className;
             }
         };
+
+        // --- 0. DUPLICATE CHECK ---
+        // Highlight any other instances of the hovered course as dead ends
+        this.getValidInstances(hoverCid).forEach(tIdx => {
+            if (tIdx !== hoverTermIdx) {
+                setHighlight(`${hoverCid}_${State.terms[tIdx].id}`, 'hl-err-temp');
+            }
+        });
 
         // --- 1. PREREQUISITE & COREQUISITE TRAVERSAL ---
         let preQueue = [{ cid: hoverCid, termIdx: hoverTermIdx, depth: 1 }];
@@ -47,19 +53,24 @@ export const HoverEngine = {
             if (!cData) continue;
 
             // Check standard prerequisites
-            cData.prereqs.forEach(reqId => {
+            let activePrereqs = cData.prereqs.filter(req => !State.whitelist.includes(req));
+            activePrereqs.forEach(reqId => {
                 let instances = this.getValidInstances(reqId);
                 if (instances.length === 0) {
                     if (curr.cid === hoverCid) status.hasMissError = true;
                 } else {
                     let validInstances = instances.filter(tIdx => tIdx < curr.termIdx);
+                    let invalidInstances = instances.filter(tIdx => tIdx >= curr.termIdx);
+
+                    // Mark Dead Ends
+                    invalidInstances.forEach(tIdx => setHighlight(`${reqId}_${State.terms[tIdx].id}`, 'hl-err-temp'));
+
                     if (validInstances.length === 0) {
                         if (curr.cid === hoverCid) status.hasTempError = true;
                     } else {
                         validInstances.forEach(tIdx => {
                             let termId = State.terms[tIdx].id;
                             let hlClass = curr.depth === 1 ? 'hl-imm-pre' : 'hl-sec-pre';
-                            // Safely assign highlight based on priority
                             setHighlight(`${reqId}_${termId}`, hlClass);
                         });
                         if (!preVisited.has(reqId)) {
@@ -70,24 +81,24 @@ export const HoverEngine = {
                 }
             });
 
-            // Check corequisites (Concurrent/Credit required)
+            // Check corequisites
             if (curr.cid === hoverCid) {
-                cData.coreqs.forEach(reqId => {
+                let activeCoreqs = cData.coreqs.filter(req => !State.whitelist.includes(req));
+                activeCoreqs.forEach(reqId => {
                     let instances = this.getValidInstances(reqId);
                     if (instances.length === 0) {
                         status.hasMissError = true;
                     } else {
                         let validCo = instances.filter(tIdx => tIdx <= curr.termIdx);
+                        let invalidCo = instances.filter(tIdx => tIdx > curr.termIdx);
+
+                        // Mark Dead Ends
+                        invalidCo.forEach(tIdx => setHighlight(`${reqId}_${State.terms[tIdx].id}`, 'hl-err-temp'));
+
                         if (validCo.length === 0) {
                             status.hasTempError = true;
                         } else {
-                            validCo.forEach(tIdx => {
-                                // Safely assign highlight based on priority
-                                setHighlight(`${reqId}_${State.terms[tIdx].id}`, 'hl-coreq');
-                            });
-                            
-                            // Push the concurrent requirement into the queue so the engine
-                            // continues to trace backwards and highlight ITS prerequisite chain!
+                            validCo.forEach(tIdx => setHighlight(`${reqId}_${State.terms[tIdx].id}`, 'hl-coreq'));
                             if (!preVisited.has(reqId)) {
                                 preVisited.add(reqId);
                                 preQueue.push({ cid: reqId, termIdx: Math.max(...validCo), depth: curr.depth + 1 });
@@ -106,18 +117,18 @@ export const HoverEngine = {
             let curr = postQueue.shift();
 
             Object.values(State.courses).forEach(potentialPost => {
-                
                 const isPrereq = potentialPost.prereqs.includes(curr.cid);
                 const isCoreq = potentialPost.coreqs.includes(curr.cid);
 
                 if (isPrereq || isCoreq) {
                     let instances = this.getValidInstances(potentialPost.id);
                     let validInstances = instances.filter(tIdx => isCoreq ? tIdx >= curr.termIdx : tIdx > curr.termIdx);
+                    let invalidInstances = instances.filter(tIdx => isCoreq ? tIdx < curr.termIdx : tIdx <= curr.termIdx);
                     
-                    validInstances.forEach(tIdx => {
-                        // Safely assign highlight based on priority
-                        setHighlight(`${potentialPost.id}_${State.terms[tIdx].id}`, 'hl-post');
-                    });
+                    // Mark Dead Ends
+                    invalidInstances.forEach(tIdx => setHighlight(`${potentialPost.id}_${State.terms[tIdx].id}`, 'hl-err-temp'));
+
+                    validInstances.forEach(tIdx => setHighlight(`${potentialPost.id}_${State.terms[tIdx].id}`, 'hl-post'));
 
                     if (!postVisited.has(potentialPost.id) && validInstances.length > 0) {
                         postVisited.add(potentialPost.id);

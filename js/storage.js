@@ -6,7 +6,9 @@ export const Storage = {
         localStorage.setItem('curriculumMap', JSON.stringify({
             terms: State.terms,
             courses: State.courses,
-            schedule: State.schedule
+            schedule: State.schedule,
+            whitelist: State.whitelist,
+            tags: State.tags
         }));
     },
     load() {
@@ -17,6 +19,14 @@ export const Storage = {
                 State.terms = parsed.terms || [];
                 State.courses = parsed.courses || {};
                 State.schedule = parsed.schedule || {};
+                State.whitelist = parsed.whitelist || [];
+                State.tags = parsed.tags || [];
+
+                // BACKWARD COMPATIBILITY: Ensure older courses have a tags array
+                Object.values(State.courses).forEach(c => {
+                    c.tags = c.tags || []; 
+                });
+
                 return true;
             } catch(e) { console.error("Failed to load map", e); }
         }
@@ -26,7 +36,9 @@ export const Storage = {
         const data = JSON.stringify({
             terms: State.terms,
             courses: State.courses,
-            schedule: State.schedule
+            schedule: State.schedule,
+            whitelist: State.whitelist,
+            tags: State.tags
         }, null, 2);
         
         const blob = new Blob([data], { type: "application/json" });
@@ -49,6 +61,8 @@ export const Storage = {
                 State.terms = parsed.terms || [];
                 State.courses = parsed.courses || {};
                 State.schedule = parsed.schedule || {};
+                State.whitelist = parsed.whitelist || [];
+                State.tags = parsed.tags || [];
                 Storage.save();
                 UI.renderTable();
             } catch(err) { alert("Invalid JSON file"); }

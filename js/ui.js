@@ -4,6 +4,7 @@ import { HoverEngine } from './hover.js';
 export const UI = {
     compactMode: false,
     selectedCourseId: null,
+    pinnedNode: null,
 
     utils: {
         sanitizeId: (str) => str.toUpperCase().replace(/\s+/g, '').replace(/[^A-Z0-9_-]/g, ''),
@@ -29,11 +30,33 @@ export const UI = {
         const hiddenClass = isHidden ? 'hidden-instance' : '';
         const eyeIcon = isHidden ? 'ph-eye-slash' : 'ph-eye';
         const compactClass = UI.compactMode ? 'compact-mode-card shrink-0' : '';
-        const selectedClass = (isBankCard && course.id === UI.selectedCourseId) ? 'selected-card' : '';
+        
+        // Pin state check
+        const isPinned = UI.pinnedNode && UI.pinnedNode.cId === course.id && UI.pinnedNode.tId === (term ? term.id : 'bank');
+        const selectedClass = (isBankCard && course.id === UI.selectedCourseId) || isPinned ? 'selected-card' : '';
+        
         let cStyleStr = (isBankCard && course.color) ? `background-color: ${course.color}; color: ${UI.utils.getContrastColor(course.color)};` : ``;
 
-        let onClickHandler = isBankCard ? `onclick="App.selectCourse('${course.id}')"` : `onclick="event.stopPropagation()"`;
-        
+        // Assign togglePin to grid cards, selectCourse to bank cards
+        let onClickHandler = isBankCard 
+            ? `onclick="App.selectCourse('${course.id}')"` 
+            : `onclick="App.togglePin(event, '${course.id}', '${term.id}')"`;
+
+        // Generate Tag Icons (z-40 so they sit under the hover buttons)
+        let tagDots = '';
+        if (course.tags && course.tags.length > 0) {
+            tagDots = `<div class="absolute top-2.5 right-1.5 flex gap-0.5 z-40">`;
+            course.tags.forEach(tId => {
+                const tag = State.tags.find(t => t.id === tId);
+                if (tag) {
+                    const iconClass = tag.icon || 'ph-circle';
+                    tagDots += `<i class="ph-fill ${iconClass} text-[0.8rem] drop-shadow-sm" style="color: ${tag.color}" title="${tag.name}"></i>`;
+                }
+            });
+            tagDots += `</div>`;
+        }
+
+        // Generate Action Buttons
         let actionButtons = isBankCard 
             ? `
             <button class="w-7 h-7 flex items-center justify-center text-text-main hover:text-accent hover:bg-surface-hover transition-colors" onclick="event.stopPropagation(); UI.editCourse('${course.id}')" title="Edit Course">
@@ -44,6 +67,9 @@ export const UI = {
             </button>
             `
             : `
+            <button class="w-7 h-7 flex items-center justify-center text-text-main hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30 transition-colors" onclick="App.hideDeadEnds(event, '${course.id}', '${term.id}')" title="Hide Dead Ends for this sequence">
+                <i class="ph ph-magic-wand fs-icon leading-none"></i>
+            </button>
             <button class="w-7 h-7 flex items-center justify-center text-text-main hover:text-accent hover:bg-surface-hover transition-colors" onclick="App.toggleHidden(event, '${course.id}', '${term.id}')" title="Toggle active status">
                 <i class="ph ${eyeIcon} fs-icon leading-none"></i>
             </button>
@@ -52,6 +78,7 @@ export const UI = {
             </button>
             `;
 
+        // Assemble the final HTML template string
         return `
             <div style="${cStyleStr}" class="course-card ${compactClass} ${hiddenClass} ${selectedClass} card-node flex flex-col justify-between group/card relative overflow-hidden" 
                  data-cid="${course.id}" data-tid="${term ? term.id : 'bank'}"
@@ -64,7 +91,9 @@ export const UI = {
                     <div class="fs-course-title truncate leading-tight mt-0.5" title="${course.title}">${course.title}</div>
                  </div>
                  
-                 ${course.joint.length ? `<div class="fs-course-joint mt-auto font-medium opacity-80 truncate leading-tight pb-0.5 italic" title="Joint: ${course.joint.join(', ')}">Joint: ${course.joint.join(', ')}</div>` : `<div class="mt-auto"></div>`}
+                 ${course.joint && course.joint.length ? `<div class="fs-course-joint mt-auto font-medium opacity-80 truncate leading-tight pb-0.5 italic" title="Joint: ${course.joint.join(', ')}">Joint: ${course.joint.join(', ')}</div>` : `<div class="mt-auto"></div>`}
+                 
+                 ${tagDots}
                  
                  <div class="absolute top-1 right-1 flex opacity-0 group-hover/card:opacity-100 transition-opacity z-50 bg-surface shadow-md border border-border rounded overflow-hidden">
                     ${actionButtons}
@@ -302,6 +331,10 @@ export const UI = {
                 newContainer.scrollTop = savedScrollPos;
             }
         }
+
+        if (UI.pinnedNode) {
+            UI.handleMouseOver(UI.pinnedNode.cId, UI.pinnedNode.tId, true);
+        }
     },
 
     openTermModal() {
@@ -322,6 +355,7 @@ export const UI = {
     },
     
     openCourseModal() {
+        UI.renderCourseTagsForm([]);
         document.getElementById('course-form').reset();
         document.getElementById('course-form').dataset.originalId = '';
         document.getElementById('course-id').readOnly = false;
@@ -334,6 +368,9 @@ export const UI = {
     editCourse(cId) {
         const c = State.courses[cId];
         if(!c) return;
+
+        UI.renderCourseTagsForm(c.tags || []);
+
         document.getElementById('course-form').dataset.originalId = c.id;
         document.getElementById('course-id').value = c.id;
         document.getElementById('course-id').readOnly = false;
@@ -350,8 +387,18 @@ export const UI = {
     },
 
     closeModals() {
-        document.getElementById('term-modal').classList.add('hidden');
-        document.getElementById('course-modal').classList.add('hidden');
+        // A catch-all list of every modal ID in the application
+        const modalIds = [
+            'term-modal', 
+            'course-modal', 
+            'whitelist-modal', 
+            'tag-manager-modal'
+        ];
+        
+        modalIds.forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.classList.add('hidden');
+        });
     },
 
     showConfirm(title, msg, onConfirmCallback) {
@@ -368,7 +415,7 @@ export const UI = {
         document.getElementById('confirm-modal').classList.add('hidden');
     },
 
-    handleMouseOver(cId, tId) {
+    updateFooter(cId) {
         const cData = State.courses[cId];
         if(!cData) return;
 
@@ -376,9 +423,38 @@ export const UI = {
         let tags = `<span class="bg-surface-alt px-2 py-1 rounded border border-border">${cData.credits} Credits</span>`;
         if(cData.prereqs.length) tags += `<span class="px-2 py-1 rounded text-[#1e3a8a] bg-[#93c5fd] border border-[#1e3a8a]">Prereqs: ${cData.prereqs.join(', ')}</span>`;
         if(cData.coreqs.length) tags += `<span class="px-2 py-1 rounded text-[#32006e] bg-[#d8c2f5] border border-[#32006e]">Coreqs: ${cData.coreqs.join(', ')}</span>`;
+        if(cData.joint && cData.joint.length) {
+            tags += `<span class="px-2 py-1 rounded text-[#0f766e] bg-[#ccfbf1] border border-[#0f766e]">Joint: ${cData.joint.join(', ')}</span>`;
+        }
+        if(cData.tags && cData.tags.length) {
+            cData.tags.forEach(tId => {
+                const tag = State.tags.find(t => t.id === tId);
+                if(tag) {
+                    const iconClass = tag.icon || 'ph-circle';
+                    tags += `<span class="px-2 py-1 rounded bg-surface border flex items-center gap-1" style="border-color: ${tag.color}; color: var(--text-main);"><i class="ph-fill ${iconClass} text-sm" style="color: ${tag.color};"></i>${tag.name}</span>`;
+                }
+            });
+        }
         document.getElementById('desc-tags').innerHTML = tags;
         document.getElementById('desc-content').innerText = cData.desc || "No description provided.";
+    },
 
+    handleMouseOver(cId, tId, forceHighlight = false) {
+        // If a node is pinned and this isn't a forced highlight,
+        // we ONLY update the footer so the user can read other course details.
+        // We DO NOT alter the locked grid highlights.
+        if (this.pinnedNode && !forceHighlight) {
+            this.updateFooter(cId);
+            return; 
+        }
+
+        this.updateFooter(cId);
+
+        // Clear existing highlights
+        const classesToRemove = ['hl-hover', 'hl-imm-pre', 'hl-sec-pre', 'hl-post', 'hl-coreq', 'hl-err-temp', 'hl-err-miss'];
+        document.querySelectorAll('.card-node').forEach(node => node.classList.remove(...classesToRemove));
+
+        // Re-analyze and apply
         const { highlights, status } = HoverEngine.analyze(cId, tId);
 
         document.querySelectorAll('.card-node').forEach(node => {
@@ -397,10 +473,138 @@ export const UI = {
     },
 
     handleMouseOut() {
+        // If we mouse off a card but have a pinned card, revert the footer back to the pinned course
+        if (this.pinnedNode) {
+            this.updateFooter(this.pinnedNode.cId);
+            return;
+        }
+
+        // Standard clear
         document.getElementById('desc-title').innerText = "Hover over a course";
         document.getElementById('desc-tags').innerHTML = "";
         document.getElementById('desc-content').innerText = "";
         const classesToRemove = ['hl-hover', 'hl-imm-pre', 'hl-sec-pre', 'hl-post', 'hl-coreq', 'hl-err-temp', 'hl-err-miss'];
         document.querySelectorAll('.card-node').forEach(node => node.classList.remove(...classesToRemove));
+    },
+
+    openWhitelistModal() {
+        // Pre-fill with existing whitelist data
+        document.getElementById('whitelist-input').value = State.whitelist.join(', ');
+        document.getElementById('whitelist-modal').classList.remove('hidden');
+        setTimeout(() => document.getElementById('whitelist-input').focus(), 50);
+    },
+
+    openTagManager() {
+        this.renderGlobalTags();
+        document.getElementById('tag-manager-modal').classList.remove('hidden');
+    },
+
+    renderIconPicker(selectedIcon = null) {
+        // Academic and structural icons
+        const icons = [
+            'ph-circle', 'ph-star', 'ph-book-open', 'ph-certificate', 
+            'ph-globe', 'ph-shapes', 'ph-compass', 'ph-palette', 
+            'ph-flask', 'ph-math-operations', 'ph-translate', 'ph-code',
+            'ph-bookmark-simple', 'ph-push-pin', 'ph-warning', 'ph-check-circle',
+            'ph-lock', 'ph-lock-simple-open', 'ph-shopping-cart', 'ph-arrow-clockwise',
+            'ph-asterisk', 'ph-book', 'ph-brackets-angle', 'ph-calculator',
+            'ph-calendar-blank', 'ph-check-circle', 'ph-diamond', 'ph-flower', 'ph-gear',
+            'ph-globe-hemisphere-west', 'ph-hamburger', 'ph-hand', 'ph-hands-praying',
+            'ph-heart', 'ph-hexagon', 'ph-key', 'ph-music-notes', 'ph-octagon', 
+            'ph-parallelogram', 'ph-paragraph', 'ph-password', 'ph-pi', 'ph-placeholder',
+            'ph-plant', 'ph-question', 'ph-seal', 'ph-shield', 'ph-skull', 'ph-smiley',
+            'ph-smiley-angry', 'ph-smiley-meh', 'ph-smiley-melting', 'ph-smiley-nervous',
+            'ph-smiley-sad', 'ph-smiley-x-eyes', 'ph-sparkle', 'ph-star-four', 'ph-tag',
+            'ph-tag-chevron', 'ph-tag-simple', 'ph-triangle', 'ph-trophy', 'ph-x'
+        ];
+        
+        const container = document.getElementById('tag-edit-icons');
+        const currentColor = document.getElementById('tag-edit-color').value || '#3b82f6';
+        
+        // If triggered via the color picker event, we grab the currently active icon
+        if (!selectedIcon) {
+            selectedIcon = document.getElementById('tag-edit-icon-val').value || 'ph-circle';
+        }
+        
+        container.innerHTML = icons.map(icon => {
+            const isSelected = icon === selectedIcon;
+            const activeClass = isSelected ? 'border-accent bg-accent-bg' : 'border-transparent text-text-muted hover:bg-surface-hover';
+            
+            // Apply the custom color only to the selected icon
+            const styleStr = isSelected ? `style="color: ${currentColor};"` : '';
+            
+            return `<button type="button" onclick="UI.selectIcon('${icon}')" class="flex justify-center items-center p-1 border rounded cursor-pointer transition-colors ${activeClass}">
+                <i class="ph-fill ${icon} text-lg drop-shadow-sm" ${styleStr}></i>
+            </button>`;
+        }).join('');
+        
+        document.getElementById('tag-edit-icon-val').value = selectedIcon;
+    },
+
+    selectIcon(icon) {
+        this.renderIconPicker(icon);
+    },
+
+    renderGlobalTags() {
+        const container = document.getElementById('global-tags-list');
+        container.innerHTML = State.tags.map(tag => {
+            const iconClass = tag.icon || 'ph-circle';
+            return `
+            <div class="flex justify-between items-center bg-canvas border border-border rounded p-2">
+                <div class="flex items-center gap-2">
+                    <i class="ph-fill ${iconClass} text-lg drop-shadow-sm" style="color: ${tag.color}"></i>
+                    <span class="text-sm font-medium">${tag.name}</span>
+                </div>
+                <div class="flex gap-1">
+                    <button onclick="UI.openTagEditor('${tag.id}')" class="p-1 text-text-muted hover:text-accent"><i class="ph ph-pencil-simple"></i></button>
+                    <button onclick="App.deleteTag('${tag.id}')" class="p-1 text-text-muted hover:text-red-500"><i class="ph ph-trash"></i></button>
+                </div>
+            </div>
+        `}).join('');
+    },
+
+    renderCourseTagsForm(selectedTagIds = []) {
+        const container = document.getElementById('course-tags-container');
+        if (State.tags.length === 0) {
+            container.innerHTML = `<span class="text-xs text-text-muted italic">No tags available. Create one!</span>`;
+            return;
+        }
+        
+        container.innerHTML = State.tags.map(tag => {
+            const isChecked = selectedTagIds.includes(tag.id) ? 'checked' : '';
+            const iconClass = tag.icon || 'ph-circle';
+            return `
+            <label class="flex items-center gap-1.5 px-2 py-1 bg-surface border border-border rounded cursor-pointer hover:bg-surface-hover">
+                <input type="checkbox" value="${tag.id}" class="course-tag-checkbox accent-accent" ${isChecked}>
+                <i class="ph-fill ${iconClass} text-sm drop-shadow-sm" style="color: ${tag.color}"></i>
+                <span class="text-xs font-medium">${tag.name}</span>
+            </label>
+        `}).join('');
+    },
+
+    openTagEditor(tagId = null) {
+        document.getElementById('tag-edit-id').value = tagId || '';
+        document.getElementById('tag-editor-title').innerText = tagId ? 'Edit Tag' : 'Create Tag';
+        
+        let selectedIcon = 'ph-circle';
+
+        if (tagId) {
+            const tag = State.tags.find(t => t.id === tagId);
+            document.getElementById('tag-edit-name').value = tag.name;
+            UI.utils.setColoris('#tag-edit-color', tag.color);
+            if (tag.icon) selectedIcon = tag.icon;
+        } else {
+            document.getElementById('tag-edit-name').value = '';
+            UI.utils.setColoris('#tag-edit-color', '#3b82f6'); 
+        }
+        
+        this.renderIconPicker(selectedIcon);
+        
+        document.getElementById('tag-editor-modal').classList.remove('hidden');
+        setTimeout(() => document.getElementById('tag-edit-name').focus(), 50);
+    },
+
+    closeTagEditor() {
+        document.getElementById('tag-editor-modal').classList.add('hidden');
     }
 };
