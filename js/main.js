@@ -133,6 +133,21 @@ const App = {
         UI.renderTable();
     },
 
+    toggleBreakdown() {
+        UI.showBreakdown = !UI.showBreakdown;
+        
+        const btn = document.getElementById('breakdown-toggle');
+        if (UI.showBreakdown) {
+            btn.classList.add('text-accent');
+            btn.classList.remove('text-text-muted');
+        } else {
+            btn.classList.remove('text-accent');
+            btn.classList.add('text-text-muted');
+        }
+        
+        UI.renderTable();
+    },
+    
     saveTerm() {
         const name = document.getElementById('term-name').value.trim();
         if (!name) return;

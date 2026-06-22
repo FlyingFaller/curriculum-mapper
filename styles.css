@@ -132,7 +132,7 @@ thead th {
     z-index: 20;
     box-shadow: 0 1px 0 0 var(--border-color); 
     background-clip: padding-box;
-    height: 3.5rem; /* Fixes Bug 3: Locks header height across all modes */
+    min-height: 3.5rem; /* Fixes Bug 3: Locks header height across all modes */
 }
 
 .sticky-col {

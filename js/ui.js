@@ -3,6 +3,7 @@ import { HoverEngine } from './hover.js';
 
 export const UI = {
     compactMode: false,
+    showBreakdown: false,
     selectedCourseId: null,
     pinnedNode: null,
 
@@ -160,19 +161,95 @@ export const UI = {
             table.classList.remove('compact-table');
         }
         
-        // --- 1. HEADER RENDERING ---
+        // --- 1. PRE-CALCULATE BREAKDOWN (IF ACTIVE) ---
+        let tagsBreakdown = [];
+        let untaggedBreakdown = { id: 'untagged', name: 'Untagged', color: 'var(--text-muted)', icon: 'ph-minus', bankTotal: 0, termTotals: {} };
+
+        if (UI.showBreakdown) {
+            tagsBreakdown = State.tags.map(t => ({
+                id: t.id, name: t.name, color: t.color,
+                icon: t.icon ? t.icon.replace('-fill', '') : 'ph-circle',
+                bankTotal: 0, termTotals: {}
+            }));
+
+            State.terms.forEach(term => {
+                tagsBreakdown.forEach(tb => tb.termTotals[term.id] = 0);
+                untaggedBreakdown.termTotals[term.id] = 0;
+            });
+
+            // Bank Totals
+            Object.values(State.courses).forEach(course => {
+                const credits = course.credits || 0;
+                if (!course.tags || course.tags.length === 0) {
+                    untaggedBreakdown.bankTotal += credits;
+                } else {
+                    course.tags.forEach(tId => {
+                        const tb = tagsBreakdown.find(t => t.id === tId);
+                        if (tb) tb.bankTotal += credits;
+                    });
+                }
+            });
+
+            // Term Totals (Ignoring Hidden & Inactive)
+            State.terms.forEach(term => {
+                Object.keys(State.schedule).forEach(cId => {
+                    const cell = State.schedule[cId]?.[term.id];
+                    if (cell && cell.active && !cell.hidden) {
+                        const course = State.courses[cId];
+                        if (course) {
+                            const credits = course.credits || 0;
+                            if (!course.tags || course.tags.length === 0) {
+                                untaggedBreakdown.termTotals[term.id] += credits;
+                            } else {
+                                course.tags.forEach(tId => {
+                                    const tb = tagsBreakdown.find(t => t.id === tId);
+                                    if (tb) tb.termTotals[term.id] += credits;
+                                });
+                            }
+                        }
+                    }
+                });
+            });
+        }
+
+        const allBreakdowns = [...tagsBreakdown, untaggedBreakdown];
+
+        // --- 2. HEADER RENDERING ---
         
-        // Calculate total hours for the entire course bank (first column)
         let totalBankCredits = Object.values(State.courses).reduce((sum, course) => sum + (course.credits || 0), 0);
 
+        // Course Bank Breakdown HTML
+        let bankBreakdownHTML = '';
+        if (UI.showBreakdown) {
+            // Removed mt-2 pt-2 to eliminate the gap
+            bankBreakdownHTML = `
+            <div class="flex flex-col gap-1 w-full">`;
+            allBreakdowns.forEach(tb => {
+                // Scaled icons from text-sm down to text-xs to match the text
+                const iconHTML = tb.id === 'untagged' 
+                    ? `<i class="ph ${tb.icon} text-xs" style="color: ${tb.color}"></i>`
+                    : `<i class="ph-fill ${tb.icon} text-xs drop-shadow-sm" style="color: ${tb.color}"></i>`;
+
+                // Applied text-xs and opacity-80 to match the term total text perfectly
+                bankBreakdownHTML += `
+                    <div class="flex justify-start items-center gap-2 text-xs h-5 font-normal opacity-80">
+                        <span class="flex items-center gap-1.5 truncate text-text-main">${iconHTML} ${tb.name}</span>
+                        <span class="shrink-0">${tb.bankTotal} cr</span>
+                    </div>`;
+            });
+            bankBreakdownHTML += `</div>`;
+        }
+
+        // Base header for Course Bank
         let headerHTML = `<tr class="bg-surface">
-        <th class="cell-size sticky-col px-3 py-2 z-30 border-b border-border bg-surface-alt">
+        <th class="cell-size sticky-col px-3 py-2 z-30 border-b border-border bg-surface-alt align-top">
             <div class="font-bold fs-header" title="${UI.compactMode ? 'Course Bank' : 'Courses'}">${UI.compactMode ? 'Course Bank' : 'Courses'}</div>
             <div class="text-xs font-normal opacity-80 mt-0.5">${totalBankCredits} hours</div>
+            ${bankBreakdownHTML}
         </th>`;
         
+        // Dynamic headers for Terms
         State.terms.forEach((term) => {
-            // Calculate active, un-hidden hours specifically for this term
             let termCredits = 0;
             Object.keys(State.schedule).forEach(cId => {
                 const cell = State.schedule[cId]?.[term.id];
@@ -182,15 +259,35 @@ export const UI = {
                 }
             });
 
+            // Term Breakdown HTML
+            let termBreakdownHTML = '';
+            if (UI.showBreakdown) {
+                // Removed mt-2 pt-2 to eliminate the gap
+                termBreakdownHTML = `
+                <div class="flex flex-col gap-1 w-full">`;
+                allBreakdowns.forEach(tb => {
+                    const termTotal = tb.termTotals[term.id];
+                    const displayTotal = termTotal > 0 ? `${termTotal} cr` : `<span class="opacity-40">0 cr</span>`;
+                    
+                    // Applied text-xs and opacity-80
+                    termBreakdownHTML += `
+                        <div class="flex justify-start items-center text-xs h-5 font-normal opacity-80">
+                            ${displayTotal}
+                        </div>`;
+                });
+                termBreakdownHTML += `</div>`;
+            }
+
             let styleStr = term.color ? `background-color: ${term.color}; color: ${UI.utils.getContrastColor(term.color)};` : `background-color: var(--bg-surface);`;
             
-            headerHTML += `<th style="${styleStr}" class="cell-size px-3 py-2 font-bold border-r border-border group text-left border-b">
+            headerHTML += `<th style="${styleStr}" class="cell-size px-3 py-2 font-bold border-r border-border group text-left border-b align-top">
                 <div class="truncate w-full pr-8 fs-header" title="${term.name}">${term.name}</div>
                 <div class="text-xs font-normal opacity-80 mt-0.5">${termCredits} hours</div>
                 <div class="absolute top-1 right-1 opacity-0 group-hover:opacity-100 flex bg-surface shadow-md border border-border rounded overflow-hidden z-50">
                     <button onclick="UI.editTerm('${term.id}')" class="w-7 h-7 flex items-center justify-center text-text-main hover:text-accent hover:bg-surface-hover transition-colors"><i class="ph ph-pencil-simple fs-icon leading-none"></i></button>
                     <button onclick="App.deleteTerm('${term.id}')" class="w-7 h-7 flex items-center justify-center text-text-main hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30 transition-colors"><i class="ph ph-trash fs-icon leading-none"></i></button>
                 </div>
+                ${termBreakdownHTML}
             </th>`;
         });
         headerHTML += `</tr>`;
