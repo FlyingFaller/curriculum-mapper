@@ -314,9 +314,10 @@ table.compact-table {
     transition: opacity 0.2s;
 }
 
-/* Shows the menu when hovering the parent card */
-.group\/card:hover .card-action-menu {
-    opacity: 100;
+/* Shows the menu when hovering the parent card or header */
+.group\/card:hover .card-action-menu,
+.group:hover .card-action-menu {
+    opacity: 1; 
 }
 
 .card-tag-dots {
@@ -369,3 +370,43 @@ table.compact-table {
     transition: background-color 0.2s;
 }
 .btn-secondary:hover { background-color: var(--bg-surface-hover); }
+
+/* =========================================
+   PRINT STYLESHEET (The True PDF Exporter)
+   ========================================= */
+@media print {
+    /* Hide the UI, Header, and Modals */
+    header, #info-footer, .card-action-menu, .btn-icon, button, #export-modal {
+        display: none !important;
+    }
+
+    /* Un-constrain the main canvas */
+    body, main, .table-container {
+        height: auto !important;
+        overflow: visible !important;
+        background-color: var(--bg-surface) !important;
+    }
+
+    /* Force background colors to print (Crucial for Chrome/Safari) */
+    * {
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+    }
+
+    /* Remove sticky positioning for print layout */
+    .sticky-col {
+        position: static !important;
+        box-shadow: none !important;
+        border-right: 1px solid var(--border-color) !important;
+    }
+
+    /* Hide the Course Bank column entirely when in Compact Mode */
+    .compact-table th:first-child, 
+    .compact-table .course-bank-cell {
+        display: none !important;
+    }
+
+    /* Ensure rows don't split across pages */
+    table { page-break-inside: auto; }
+    tr { page-break-inside: avoid; page-break-after: auto; }
+}

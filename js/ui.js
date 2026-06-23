@@ -68,7 +68,15 @@ export const UI = {
             confirmModal: document.getElementById('confirm-modal'),
             confirmTitle: document.getElementById('confirm-title'),
             confirmMessage: document.getElementById('confirm-message'),
-            confirmBtn: document.getElementById('confirm-btn')
+            confirmBtn: document.getElementById('confirm-btn'),
+            // Export Modal
+            exportModal: document.getElementById('export-modal'),
+            exportFormat: document.getElementById('export-format'),
+            exportOptionsContainer: document.getElementById('export-options-container'),
+            exportIgnoreHidden: document.getElementById('export-ignore-hidden'),
+            exportIgnoreBank: document.getElementById('export-ignore-bank'),
+            exportIncludeMeta: document.getElementById('export-include-meta'),
+            exportMetaLabel: document.getElementById('export-meta-label')
         };
     },
 
@@ -100,7 +108,8 @@ export const UI = {
             const allModals = [
                 UI.elements.termModal, UI.elements.courseModal, 
                 UI.elements.whitelistModal, UI.elements.tagManagerModal, 
-                UI.elements.tagEditorModal, UI.elements.confirmModal
+                UI.elements.tagEditorModal, UI.elements.confirmModal,
+                UI.elements.exportModal
             ];
             allModals.forEach(el => { if (el) el.classList.add('hidden'); });
         }
@@ -338,6 +347,30 @@ export const UI = {
 
     selectIcon(icon) {
         this.renderIconPicker(icon);
+    },
+
+    openExportModal() {
+    // Reset to default state
+    this.elements.exportFormat.value = 'json';
+    this.toggleExportOptions();
+    this.modals.open(this.elements.exportModal, this.elements.exportFormat);
+    },
+
+    toggleExportOptions() {
+        const format = this.elements.exportFormat.value;
+        
+        if (format === 'json') {
+            this.elements.exportOptionsContainer.classList.add('hidden');
+        } else {
+            this.elements.exportOptionsContainer.classList.remove('hidden');
+            
+            // Hide Metadata checkbox if the format starts with 'pdf'
+            if (format.startsWith('pdf')) {
+                this.elements.exportMetaLabel.classList.add('hidden');
+            } else {
+                this.elements.exportMetaLabel.classList.remove('hidden');
+            }
+        }
     },
 
     // ==========================================
