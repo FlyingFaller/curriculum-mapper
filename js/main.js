@@ -5,17 +5,21 @@ import { HoverEngine } from './hover.js';
 import { UI } from './ui.js';
 
 const App = {
+    // ==========================================
+    // INITIALIZATION
+    // ==========================================
     init() {
         ThemeConfig.init();
         if (!Storage.load()) {
             State.initDefault();
             Storage.save();
         }
+        
+        UI.initDOM(); 
         UI.initColoris();
         UI.renderTable();
         UI.initResizer();
 
-        // NEW: Global listener to clear pins via Escape
         document.addEventListener('keydown', (e) => {
             if (e.key === 'Escape' && UI.pinnedNode) {
                 App.clearPin();
@@ -23,102 +27,14 @@ const App = {
         });
     },
 
-    saveTag() {
-        const idInput = document.getElementById('tag-edit-id').value;
-        const name = document.getElementById('tag-edit-name').value.trim();
-        const color = document.getElementById('tag-edit-color').value;
-        const icon = document.getElementById('tag-edit-icon-val').value || 'ph-circle';
-
-        if (!name) return alert("Tag name is required");
-
-        let newTagId = null; 
-
-        if (idInput) {
-            // Edit existing
-            const tag = State.tags.find(t => t.id === idInput);
-            if (tag) { 
-                tag.name = name; 
-                tag.color = color; 
-                tag.icon = icon; 
-            }
-        } else {
-            // Create new
-            newTagId = 'tag-' + Date.now();
-            State.tags.push({ id: newTagId, name, color, icon });
-        }
-
-        Storage.save();
-        UI.closeTagEditor();
-        
-        // Refresh whichever UI elements are currently visible
-        UI.renderGlobalTags(); 
-        
-        // Grab currently checked tags so we don't lose them when redrawing the form
-        const checkedBoxes = Array.from(document.querySelectorAll('.course-tag-checkbox:checked')).map(cb => cb.value);
-        
-        if (newTagId) {
-            checkedBoxes.push(newTagId);
-        }
-
-        UI.renderCourseTagsForm(checkedBoxes); 
-        UI.renderTable();
-    },
-
-    deleteTag(tagId) {
-        UI.showConfirm("Delete Tag", "Are you sure? This will remove the tag from all courses.", () => {
-            State.tags = State.tags.filter(t => t.id !== tagId);
-            // Scrub from all courses
-            Object.values(State.courses).forEach(c => {
-                c.tags = (c.tags || []).filter(t => t !== tagId);
-            });
-            Storage.save();
-            UI.renderGlobalTags();
-            UI.renderCourseTagsForm();
-            UI.renderTable();
-        });
-    },
-
-    saveWhitelist() {
-        const rawInput = document.getElementById('whitelist-input').value;
-        State.whitelist = UI.utils.parseList(rawInput);
-        Storage.save();
-        UI.closeModals();
-        UI.renderTable();
-    },
-
-    togglePin(event, courseId, termId) {
-        event.stopPropagation(); 
-
-        // If clicking the currently pinned card, unpin it
-        if (UI.pinnedNode && UI.pinnedNode.cId === courseId && UI.pinnedNode.tId === termId) {
-            this.clearPin();
-        } else {
-            // Pin the new card
-            UI.pinnedNode = { cId: courseId, tId: termId };
-            UI.renderTable(); // Re-render to apply the CSS selection ring
-            
-            // Because re-rendering destroys the old DOM nodes, we must manually 
-            // force the hover engine to reapply the CSS background highlights
-            UI.handleMouseOver(courseId, termId, true);
-        }
-    },
-
-    clearPin() {
-        UI.pinnedNode = null;
-        UI.renderTable();
-        UI.handleMouseOut();
-    },
-
-    selectCourse(courseId) {
-        UI.selectedCourseId = (UI.selectedCourseId === courseId) ? null : courseId;
-        UI.renderTable();
-    },
-
+    // ==========================================
+    // GLOBAL ACTIONS
+    // ==========================================
     toggleCompactMode() {
         UI.compactMode = !UI.compactMode;
         if (!UI.compactMode) UI.selectedCourseId = null; 
         
-        const btn = document.getElementById('compact-toggle');
+        const btn = UI.elements.compactToggle;
         const icon = btn.querySelector('i');
         
         if (UI.compactMode) {
@@ -136,7 +52,7 @@ const App = {
     toggleBreakdown() {
         UI.showBreakdown = !UI.showBreakdown;
         
-        const btn = document.getElementById('breakdown-toggle');
+        const btn = UI.elements.breakdownToggle;
         if (UI.showBreakdown) {
             btn.classList.add('text-accent');
             btn.classList.remove('text-text-muted');
@@ -144,54 +60,81 @@ const App = {
             btn.classList.remove('text-accent');
             btn.classList.add('text-text-muted');
         }
-        
-        UI.renderTable();
-    },
-    
-    saveTerm() {
-        const name = document.getElementById('term-name').value.trim();
-        if (!name) return;
-        
-        const colorVal = document.getElementById('term-color').value;
-        const color = colorVal !== '#ffffff' ? colorVal : '';
-        const id = document.getElementById('term-name').dataset.id;
-        
-        if (id) {
-            const term = State.terms.find(t => t.id === id);
-            if (term) {
-                term.name = name;
-                term.color = color;
-            }
-        } else {
-            const newId = 't-' + Date.now();
-            State.terms.push({ id: newId, name, color: color });
-        }
-        
-        Storage.save();
-        UI.closeModals();
         UI.renderTable();
     },
 
-    deleteTerm(termId) {
-        UI.showConfirm("Delete Term", "Delete this term and all course assignments in it?", () => {
-            State.terms = State.terms.filter(t => t.id !== termId);
-            Object.keys(State.schedule).forEach(cId => {
-                if (State.schedule[cId][termId]) delete State.schedule[cId][termId];
+    showAllHidden() {
+        UI.showConfirm("Unhide All", "Are you sure you want to make all hidden course cards visible?", () => {
+            Object.values(State.schedule).forEach(termMap => {
+                Object.values(termMap).forEach(cell => {
+                    if (cell.active) cell.hidden = false;
+                });
             });
             Storage.save();
             UI.renderTable();
         });
     },
 
+    hideErrors() {
+        UI.showConfirm("Hide Errors", "This will automatically hide scheduled instances that have missing or incorrectly timed prerequisites. Proceed?", () => {
+            let changed = true;
+            let passLimit = 100; 
+            let passes = 0;
+            
+            while (changed && passes < passLimit) {
+                changed = false;
+                passes++;
+                let toHide = [];
+
+                const allCourses = Object.keys(State.schedule);
+                for (const cId of allCourses) {
+                    for (const tId in State.schedule[cId]) {
+                        let cell = State.schedule[cId][tId];
+                        if (cell.active && !cell.hidden) {
+                            let { status } = HoverEngine.analyze(cId, tId);
+                            if (status.hasTempError || status.hasMissError) toHide.push({ cId, tId });
+                        }
+                    }
+                }
+
+                if (toHide.length > 0) {
+                    toHide.forEach(({ cId, tId }) => State.schedule[cId][tId].hidden = true);
+                    changed = true; 
+                }
+            }
+            Storage.save();
+            UI.renderTable();
+        });
+    },
+
+    resetMap() {
+        UI.showConfirm("Reset Map", "Are you sure you want to completely reset the schedule builder?", () => {
+            localStorage.removeItem('curriculumMap');
+            State.initDefault();
+            Storage.save();
+            UI.renderTable();
+        });
+    },
+
+    saveWhitelist() {
+        const rawInput = UI.elements.whitelistInput.value;
+        State.whitelist = UI.utils.parseList(rawInput);
+        Storage.save();
+        UI.modals.closeAll();
+        UI.renderTable();
+    },
+
+    // ==========================================
+    // ENTITY MANAGEMENT (Courses, Terms, Tags)
+    // ==========================================
     saveCourse() {
-        const rawId = document.getElementById('course-id').value;
+        const rawId = UI.elements.courseId.value;
         const id = UI.utils.sanitizeId(rawId);
         if(!id) return alert("Course ID is required.");
         
-        const originalId = document.getElementById('course-form').dataset.originalId;
-        
-        const colorVal = document.getElementById('course-color').value;
-        const color = colorVal !== '#ffffff' ? colorVal : '';
+        const originalId = UI.elements.courseForm.dataset.originalId;
+        const colorVal = UI.elements.courseColor.value;
+        const color = colorVal !== UI.config.defaultCourseColor ? colorVal : '';
 
         if (originalId && originalId !== id) {
             if (State.courses[id]) return alert("A course with this new ID already exists!");
@@ -216,18 +159,18 @@ const App = {
 
         State.courses[id] = {
             id: id,
-            title: document.getElementById('course-title').value.trim(),
-            credits: parseInt(document.getElementById('course-credits').value) || 0,
-            prereqs: UI.utils.parseList(document.getElementById('course-prereqs').value),
-            coreqs: UI.utils.parseList(document.getElementById('course-coreqs').value),
-            joint: UI.utils.parseList(document.getElementById('course-joint').value),
-            tags: selectedTags, // NEW: Save the tags array here!
-            desc: document.getElementById('course-desc').value.trim(),
+            title: UI.elements.courseTitle.value.trim(),
+            credits: parseInt(UI.elements.courseCredits.value) || 0,
+            prereqs: UI.utils.parseList(UI.elements.coursePrereqs.value),
+            coreqs: UI.utils.parseList(UI.elements.courseCoreqs.value),
+            joint: UI.utils.parseList(UI.elements.courseJoint.value),
+            tags: selectedTags,
+            desc: UI.elements.courseDesc.value.trim(),
             color: color
         };
 
         Storage.save();
-        UI.closeModals();
+        UI.modals.closeAll();
         UI.renderTable();
     },
 
@@ -243,6 +186,106 @@ const App = {
             Storage.save();
             UI.renderTable();
         });
+    },
+
+    saveTerm() {
+        const name = UI.elements.termName.value.trim();
+        if (!name) return;
+        
+        const colorVal = UI.elements.termColor.value;
+        const color = colorVal !== UI.config.defaultTermColor ? colorVal : '';
+        const id = UI.elements.termName.dataset.id;
+        
+        if (id) {
+            const term = State.terms.find(t => t.id === id);
+            if (term) {
+                term.name = name;
+                term.color = color;
+            }
+        } else {
+            const newId = 't-' + Date.now();
+            State.terms.push({ id: newId, name, color: color });
+        }
+        
+        Storage.save();
+        UI.modals.closeAll();
+        UI.renderTable();
+    },
+
+    deleteTerm(termId) {
+        UI.showConfirm("Delete Term", "Delete this term and all course assignments in it?", () => {
+            State.terms = State.terms.filter(t => t.id !== termId);
+            Object.keys(State.schedule).forEach(cId => {
+                if (State.schedule[cId][termId]) delete State.schedule[cId][termId];
+            });
+            Storage.save();
+            UI.renderTable();
+        });
+    },
+
+    saveTag() {
+        const idInput = UI.elements.tagEditId.value;
+        const name = UI.elements.tagEditName.value.trim();
+        const color = UI.elements.tagEditColor.value;
+        const icon = UI.elements.tagEditIconVal.value || 'ph-circle';
+
+        if (!name) return alert("Tag name is required");
+
+        let newTagId = null; 
+
+        if (idInput) {
+            const tag = State.tags.find(t => t.id === idInput);
+            if (tag) { tag.name = name; tag.color = color; tag.icon = icon; }
+        } else {
+            newTagId = 'tag-' + Date.now();
+            State.tags.push({ id: newTagId, name, color, icon });
+        }
+
+        Storage.save();
+        UI.closeTagEditor();
+        UI.renderGlobalTags(); 
+        
+        const checkedBoxes = Array.from(document.querySelectorAll('.course-tag-checkbox:checked')).map(cb => cb.value);
+        if (newTagId) checkedBoxes.push(newTagId);
+
+        UI.renderCourseTagsForm(checkedBoxes); 
+        UI.renderTable();
+    },
+
+    deleteTag(tagId) {
+        UI.showConfirm("Delete Tag", "Are you sure? This will remove the tag from all courses.", () => {
+            State.tags = State.tags.filter(t => t.id !== tagId);
+            Object.values(State.courses).forEach(c => c.tags = (c.tags || []).filter(t => t !== tagId));
+            Storage.save();
+            UI.renderGlobalTags();
+            UI.renderCourseTagsForm();
+            UI.renderTable();
+        });
+    },
+
+    // ==========================================
+    // GRID INTERACTIONS
+    // ==========================================
+    togglePin(event, courseId, termId) {
+        event.stopPropagation(); 
+        if (UI.pinnedNode && UI.pinnedNode.cId === courseId && UI.pinnedNode.tId === termId) {
+            this.clearPin();
+        } else {
+            UI.pinnedNode = { cId: courseId, tId: termId };
+            UI.renderTable(); 
+            UI.handleMouseOver(courseId, termId, true);
+        }
+    },
+
+    clearPin() {
+        UI.pinnedNode = null;
+        UI.renderTable();
+        UI.handleMouseOut();
+    },
+
+    selectCourse(courseId) {
+        UI.selectedCourseId = (UI.selectedCourseId === courseId) ? null : courseId;
+        UI.renderTable();
     },
 
     toggleCell(courseId, termId) {
@@ -276,10 +319,8 @@ const App = {
     hideDeadEnds(event, courseId, termId) {
         event.stopPropagation();
         const { highlights } = HoverEngine.analyze(courseId, termId);
-        
         let hiddenCount = 0;
         
-        // Find all keys that were marked as dead ends (hl-err-temp)
         for (const [key, highlightClass] of Object.entries(highlights)) {
             if (highlightClass === 'hl-err-temp') {
                 const [targetCid, targetTid] = key.split('_');
@@ -293,75 +334,17 @@ const App = {
         if (hiddenCount > 0) {
             Storage.save();
             UI.renderTable();
-            UI.handleMouseOver(courseId, termId, true); // UPDATED: Added true flag
+            UI.handleMouseOver(courseId, termId, true); 
         }
-    },
-
-    showAllHidden() {
-        UI.showConfirm("Unhide All", "Are you sure you want to make all hidden course cards visible?", () => {
-            Object.values(State.schedule).forEach(termMap => {
-                Object.values(termMap).forEach(cell => {
-                    if (cell.active) cell.hidden = false;
-                });
-            });
-            Storage.save();
-            UI.renderTable();
-        });
-    },
-
-    hideErrors() {
-        UI.showConfirm("Hide Errors", "This will automatically hide scheduled instances that have missing or incorrectly timed prerequisites. Proceed?", () => {
-            let changed = true;
-            let passLimit = 100; 
-            let passes = 0;
-            
-            while (changed && passes < passLimit) {
-                changed = false;
-                passes++;
-                let toHide = [];
-
-                const allCourses = Object.keys(State.schedule);
-                for (const cId of allCourses) {
-                    for (const tId in State.schedule[cId]) {
-                        let cell = State.schedule[cId][tId];
-                        if (cell.active && !cell.hidden) {
-                            let { status } = HoverEngine.analyze(cId, tId);
-                            if (status.hasTempError || status.hasMissError) {
-                                toHide.push({ cId, tId });
-                            }
-                        }
-                    }
-                }
-
-                if (toHide.length > 0) {
-                    toHide.forEach(({ cId, tId }) => {
-                        State.schedule[cId][tId].hidden = true;
-                    });
-                    changed = true; 
-                }
-            }
-            Storage.save();
-            UI.renderTable();
-        });
-    },
-
-    resetMap() {
-        UI.showConfirm("Reset Map", "Are you sure you want to completely reset the schedule builder?", () => {
-            localStorage.removeItem('curriculumMap');
-            State.initDefault();
-            Storage.save();
-            UI.renderTable();
-        });
     }
 };
 
-// Mount to global window object so inline HTML 'onclick' handlers still work
 window.ThemeConfig = ThemeConfig;
 window.State = State;
 window.Storage = Storage;
 window.HoverEngine = HoverEngine;
 window.UI = UI;
+window.Components = window.Components || {};
 window.App = App;
 
-// Boot the application
 document.addEventListener('DOMContentLoaded', () => App.init());

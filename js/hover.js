@@ -20,30 +20,31 @@ export const HoverEngine = {
 
         if (hoverTermIdx === -1 || !State.courses[hoverCid]) return { highlights, status };
 
-        // ADDED hl-err-temp as the highest priority to ensure dead ends are always visible
-        const priority = {
-            'hl-err-temp': 5,
-            'hl-imm-pre': 4,
-            'hl-coreq': 3,
-            'hl-post': 2,
-            'hl-sec-pre': 1
-        };
+        this._markDuplicates(hoverCid, hoverTermIdx, highlights);
+        this._tracePrerequisites(hoverCid, hoverTermIdx, highlights, status);
+        this._tracePostrequisites(hoverCid, hoverTermIdx, highlights);
 
-        const setHighlight = (key, className) => {
-            if (!highlights[key] || priority[className] > priority[highlights[key]]) {
-                highlights[key] = className;
-            }
-        };
+        return { highlights, status };
+    },
 
-        // --- 0. DUPLICATE CHECK ---
-        // Highlight any other instances of the hovered course as dead ends
+    // --- HELPER FUNCTIONS ---
+
+    _setHighlight(highlights, key, className) {
+        const priority = { 'hl-err-temp': 5, 'hl-imm-pre': 4, 'hl-coreq': 3, 'hl-post': 2, 'hl-sec-pre': 1 };
+        if (!highlights[key] || priority[className] > priority[highlights[key]]) {
+            highlights[key] = className;
+        }
+    },
+
+    _markDuplicates(hoverCid, hoverTermIdx, highlights) {
         this.getValidInstances(hoverCid).forEach(tIdx => {
             if (tIdx !== hoverTermIdx) {
-                setHighlight(`${hoverCid}_${State.terms[tIdx].id}`, 'hl-err-temp');
+                this._setHighlight(highlights, `${hoverCid}_${State.terms[tIdx].id}`, 'hl-err-temp');
             }
         });
+    },
 
-        // --- 1. PREREQUISITE & COREQUISITE TRAVERSAL ---
+    _tracePrerequisites(hoverCid, hoverTermIdx, highlights, status) {
         let preQueue = [{ cid: hoverCid, termIdx: hoverTermIdx, depth: 1 }];
         let preVisited = new Set([hoverCid]);
 
@@ -52,7 +53,7 @@ export const HoverEngine = {
             let cData = State.courses[curr.cid];
             if (!cData) continue;
 
-            // Check standard prerequisites
+            // Standard Prerequisites
             let activePrereqs = cData.prereqs.filter(req => !State.whitelist.includes(req));
             activePrereqs.forEach(reqId => {
                 let instances = this.getValidInstances(reqId);
@@ -62,16 +63,14 @@ export const HoverEngine = {
                     let validInstances = instances.filter(tIdx => tIdx < curr.termIdx);
                     let invalidInstances = instances.filter(tIdx => tIdx >= curr.termIdx);
 
-                    // Mark Dead Ends
-                    invalidInstances.forEach(tIdx => setHighlight(`${reqId}_${State.terms[tIdx].id}`, 'hl-err-temp'));
+                    invalidInstances.forEach(tIdx => this._setHighlight(highlights, `${reqId}_${State.terms[tIdx].id}`, 'hl-err-temp'));
 
                     if (validInstances.length === 0) {
                         if (curr.cid === hoverCid) status.hasTempError = true;
                     } else {
                         validInstances.forEach(tIdx => {
-                            let termId = State.terms[tIdx].id;
                             let hlClass = curr.depth === 1 ? 'hl-imm-pre' : 'hl-sec-pre';
-                            setHighlight(`${reqId}_${termId}`, hlClass);
+                            this._setHighlight(highlights, `${reqId}_${State.terms[tIdx].id}`, hlClass);
                         });
                         if (!preVisited.has(reqId)) {
                             preVisited.add(reqId);
@@ -81,7 +80,7 @@ export const HoverEngine = {
                 }
             });
 
-            // Check corequisites
+            // Corequisites
             if (curr.cid === hoverCid) {
                 let activeCoreqs = cData.coreqs.filter(req => !State.whitelist.includes(req));
                 activeCoreqs.forEach(reqId => {
@@ -92,13 +91,12 @@ export const HoverEngine = {
                         let validCo = instances.filter(tIdx => tIdx <= curr.termIdx);
                         let invalidCo = instances.filter(tIdx => tIdx > curr.termIdx);
 
-                        // Mark Dead Ends
-                        invalidCo.forEach(tIdx => setHighlight(`${reqId}_${State.terms[tIdx].id}`, 'hl-err-temp'));
+                        invalidCo.forEach(tIdx => this._setHighlight(highlights, `${reqId}_${State.terms[tIdx].id}`, 'hl-err-temp'));
 
                         if (validCo.length === 0) {
                             status.hasTempError = true;
                         } else {
-                            validCo.forEach(tIdx => setHighlight(`${reqId}_${State.terms[tIdx].id}`, 'hl-coreq'));
+                            validCo.forEach(tIdx => this._setHighlight(highlights, `${reqId}_${State.terms[tIdx].id}`, 'hl-coreq'));
                             if (!preVisited.has(reqId)) {
                                 preVisited.add(reqId);
                                 preQueue.push({ cid: reqId, termIdx: Math.max(...validCo), depth: curr.depth + 1 });
@@ -108,8 +106,9 @@ export const HoverEngine = {
                 });
             }
         }
+    },
 
-        // --- 2. POSTREQUISITE TRAVERSAL ---
+    _tracePostrequisites(hoverCid, hoverTermIdx, highlights) {
         let postQueue = [{ cid: hoverCid, termIdx: hoverTermIdx }];
         let postVisited = new Set([hoverCid]);
 
@@ -125,10 +124,8 @@ export const HoverEngine = {
                     let validInstances = instances.filter(tIdx => isCoreq ? tIdx >= curr.termIdx : tIdx > curr.termIdx);
                     let invalidInstances = instances.filter(tIdx => isCoreq ? tIdx < curr.termIdx : tIdx <= curr.termIdx);
                     
-                    // Mark Dead Ends
-                    invalidInstances.forEach(tIdx => setHighlight(`${potentialPost.id}_${State.terms[tIdx].id}`, 'hl-err-temp'));
-
-                    validInstances.forEach(tIdx => setHighlight(`${potentialPost.id}_${State.terms[tIdx].id}`, 'hl-post'));
+                    invalidInstances.forEach(tIdx => this._setHighlight(highlights, `${potentialPost.id}_${State.terms[tIdx].id}`, 'hl-err-temp'));
+                    validInstances.forEach(tIdx => this._setHighlight(highlights, `${potentialPost.id}_${State.terms[tIdx].id}`, 'hl-post'));
 
                     if (!postVisited.has(potentialPost.id) && validInstances.length > 0) {
                         postVisited.add(potentialPost.id);
@@ -137,7 +134,5 @@ export const HoverEngine = {
                 }
             });
         }
-
-        return { highlights, status };
     }
 };

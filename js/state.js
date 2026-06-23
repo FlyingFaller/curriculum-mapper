@@ -18,5 +18,18 @@ export const State = {
         this.schedule = {};
         this.whitelist = [];
         this.tags = [];
+    },
+
+    hydrate(parsed) {
+        this.terms = parsed.terms || [];
+        this.courses = parsed.courses || {};
+        this.schedule = parsed.schedule || {};
+        this.whitelist = parsed.whitelist || [];
+        this.tags = parsed.tags || [];
+
+        // BACKWARD COMPATIBILITY: Ensure older courses have a tags array
+        Object.values(this.courses).forEach(c => {
+            c.tags = c.tags || []; 
+        });
     }
 };

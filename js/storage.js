@@ -15,18 +15,7 @@ export const Storage = {
         const data = localStorage.getItem('curriculumMap');
         if (data) {
             try {
-                const parsed = JSON.parse(data);
-                State.terms = parsed.terms || [];
-                State.courses = parsed.courses || {};
-                State.schedule = parsed.schedule || {};
-                State.whitelist = parsed.whitelist || [];
-                State.tags = parsed.tags || [];
-
-                // BACKWARD COMPATIBILITY: Ensure older courses have a tags array
-                Object.values(State.courses).forEach(c => {
-                    c.tags = c.tags || []; 
-                });
-
+                State.hydrate(JSON.parse(data));
                 return true;
             } catch(e) { console.error("Failed to load map", e); }
         }
@@ -57,12 +46,7 @@ export const Storage = {
         const reader = new FileReader();
         reader.onload = function(e) {
             try {
-                const parsed = JSON.parse(e.target.result);
-                State.terms = parsed.terms || [];
-                State.courses = parsed.courses || {};
-                State.schedule = parsed.schedule || {};
-                State.whitelist = parsed.whitelist || [];
-                State.tags = parsed.tags || [];
+                State.hydrate(JSON.parse(e.target.result));
                 Storage.save();
                 UI.renderTable();
             } catch(err) { alert("Invalid JSON file"); }
