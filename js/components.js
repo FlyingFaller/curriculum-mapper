@@ -196,6 +196,15 @@ export const Components = {
     },
 
     generateCourseCardHTML(course, term, isHidden, isBankCard = false) {
+        let instanceCount = 0;
+        if (State.schedule[course.id]) {
+            instanceCount = Object.values(State.schedule[course.id]).filter(cell => cell.active).length;
+        }
+
+        const isSingleton = instanceCount === 1;
+        // const singletonStyles = isSingleton ? 'italic text-accent' : '';
+        // const singletonStyles = isSingleton ? 'italic' : '';
+        const singletonStyles = isSingleton ? 'text-accent' : '';
         const hiddenClass = isHidden ? 'hidden-instance' : '';
         const eyeIcon = isHidden ? 'ph-eye-slash' : 'ph-eye';
         const compactClass = UI.compactMode ? 'compact-mode-card shrink-0' : '';
@@ -229,7 +238,9 @@ export const Components = {
             <div style="${cStyleStr}" class="course-card ${compactClass} ${hiddenClass} ${selectedClass} card-node flex flex-col justify-between group/card relative overflow-hidden" 
                  data-cid="${course.id}" data-tid="${term ? term.id : 'bank'}" onmouseenter="UI.handleMouseOver('${course.id}', '${term ? term.id : 'bank'}')" onmouseleave="UI.handleMouseOut()" ${onClickHandler}>
                  <div class="flex flex-col w-full">
-                    <span class="font-bold text-course-id leading-tight truncate pr-8" title="${course.id}">${course.id} <span class="font-normal text-course-credits">(${course.credits})</span></span>
+                    
+                    <span class="font-bold text-course-id leading-tight truncate pr-8 ${singletonStyles}" title="${course.id}">${course.id} <span class="font-normal text-course-credits text-text-main not-italic opacity-80">(${course.credits})</span></span>
+                    
                     <div class="text-course-title truncate leading-tight mt-0.5" title="${course.title}">${course.title}</div>
                  </div>
                  ${course.joint && course.joint.length ? `<div class="text-course-joint mt-auto font-medium opacity-80 truncate leading-tight pb-0.5 italic" title="Joint: ${course.joint.join(', ')}">Joint: ${course.joint.join(', ')}</div>` : `<div class="mt-auto"></div>`}
