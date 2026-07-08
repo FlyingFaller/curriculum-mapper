@@ -341,28 +341,76 @@
     </div>
 
     <div id="tag-editor-modal" class="fixed inset-0 bg-black/40 hidden flex items-center justify-center z-[60]">
-        <div class="bg-surface border border-border rounded-xl shadow-2xl w-full max-w-xs overflow-hidden flex flex-col">
+        <div class="bg-surface border border-border rounded-xl shadow-2xl w-full max-w-sm overflow-hidden flex flex-col">
             <div class="px-5 py-3 border-b border-border flex justify-between items-center bg-surface-alt">
                 <h3 id="tag-editor-title" class="font-bold text-md text-text-main">Create Tag</h3>
             </div>
-            <div class="p-5 space-y-4">
+            <div class="p-5 space-y-4 max-h-[75vh] overflow-y-auto">
                 <input type="hidden" id="tag-edit-id">
                 <input type="hidden" id="tag-edit-icon-val">
+                
                 <div>
                     <label class="block text-xs font-semibold text-text-muted mb-1">Tag Name</label>
                     <input type="text" id="tag-edit-name" class="modal-input">
                 </div>
-                <div>
-                    <label class="block text-xs font-semibold text-text-muted mb-1">Color</label>
-                    <input type="text" id="tag-edit-color" data-coloris value="#3b82f6" oninput="UI.renderIconPicker()" class="w-full bg-canvas border border-border text-text-main rounded px-3 py-2 text-xs focus:border-border-focus outline-none cursor-pointer">
-                </div>
-                <div>
-                    <label class="block text-xs font-semibold text-text-muted mb-1">Icon</label>
-                    <div id="tag-edit-icons" class="grid grid-cols-6 gap-1 bg-canvas p-1.5 border border-border rounded max-h-32 overflow-y-auto">
+                
+                <div class="flex gap-3">
+                    <div class="flex-1">
+                        <label class="block text-xs font-semibold text-text-muted mb-1">Color</label>
+                        <input type="text" id="tag-edit-color" data-coloris value="#3b82f6" oninput="UI.renderIconPicker()" class="w-full bg-canvas border border-border text-text-main rounded px-3 py-2 text-xs focus:border-border-focus outline-none cursor-pointer">
                     </div>
                 </div>
+                
+                <div>
+                    <label class="block text-xs font-semibold text-text-muted mb-1">Icon</label>
+                    <div id="tag-edit-icons" class="grid grid-cols-8 gap-1 bg-canvas p-1.5 border border-border rounded max-h-32 overflow-y-auto">
+                    </div>
+                </div>
+
+                <div class="pt-3 border-t border-border border-dashed">
+                    <label class="flex items-center gap-2 cursor-pointer text-sm font-semibold text-text-main hover:text-accent transition-colors">
+                        <input type="checkbox" id="tag-edit-enable-constraints" class="accent-accent w-4 h-4" onchange="UI.toggleTagConstraints()">
+                        <span>Enable Optimizer Constraints</span>
+                    </label>
+                </div>
+
+                <div id="tag-constraints-container" class="space-y-3 hidden bg-surface-alt p-3 rounded border border-border">
+                    <div class="flex gap-3">
+                        <div class="w-1/2">
+                            <label class="block text-xs font-semibold text-text-muted mb-1">Requirement Type</label>
+                            <select id="tag-edit-req-type" class="modal-input cursor-pointer" onchange="UI.toggleTagConstraints()">
+                                <option value="mandatory">Mandatory</option>
+                                <option value="optional">Optional/Desired</option>
+                            </select>
+                        </div>
+                        <div class="w-1/2">
+                            <label class="block text-xs font-semibold text-text-muted mb-1">Constraint Metric</label>
+                            <select id="tag-edit-metric" class="modal-input cursor-pointer">
+                                <option value="courses">By Course Count</option>
+                                <option value="credits">By Credit Count</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="flex gap-3">
+                        <div class="w-1/2">
+                            <label class="block text-xs font-semibold text-text-muted mb-1">Min Required</label>
+                            <input type="number" id="tag-edit-min" value="1" min="0" class="modal-input">
+                        </div>
+                        <div class="w-1/2">
+                            <label class="block text-xs font-semibold text-text-muted mb-1">Max Allowed (Opt.)</label>
+                            <input type="number" id="tag-edit-max" placeholder="∞" min="0" class="modal-input">
+                        </div>
+                    </div>
+
+                    <div id="tag-weight-container" class="hidden">
+                        <label class="block text-xs font-semibold text-text-muted mb-1">Desirability Weight (<span id="tag-weight-val">5</span>)</label>
+                        <input type="range" id="tag-edit-weight" min="1" max="10" value="5" class="w-full accent-accent cursor-pointer" oninput="document.getElementById('tag-weight-val').innerText = this.value">
+                    </div>
+                </div>
+
             </div>
-            <div class="px-5 py-3 border-t border-border flex justify-end gap-2 bg-surface-alt">
+            <div class="px-5 py-3 border-t border-border flex justify-end gap-2 bg-surface-alt shrink-0">
                 <button onclick="UI.closeTagEditor()" class="btn-secondary">Cancel</button>
                 <button onclick="App.saveTag()" class="btn-primary shadow-sm">Save</button>
             </div>

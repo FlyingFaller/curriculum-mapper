@@ -231,14 +231,31 @@ const App = {
 
         if (!name) return alert("Tag name is required");
 
+        let constraints = null;
+        if (UI.elements.tagEditEnableConstraints.checked) {
+            const maxVal = UI.elements.tagEditMax.value;
+            constraints = {
+                type: UI.elements.tagEditReqType.value,
+                metric: UI.elements.tagEditMetric.value,
+                min: parseInt(UI.elements.tagEditMin.value) || 0,
+                max: maxVal ? parseInt(maxVal) : null,
+                weight: parseInt(UI.elements.tagEditWeight.value) || 5
+            };
+        }
+
         let newTagId = null; 
 
         if (idInput) {
             const tag = State.tags.find(t => t.id === idInput);
-            if (tag) { tag.name = name; tag.color = color; tag.icon = icon; }
+            if (tag) { 
+                tag.name = name; 
+                tag.color = color; 
+                tag.icon = icon; 
+                tag.constraints = constraints;
+            }
         } else {
             newTagId = 'tag-' + Date.now();
-            State.tags.push({ id: newTagId, name, color, icon });
+            State.tags.push({ id: newTagId, name, color, icon, constraints });
         }
 
         Storage.save();

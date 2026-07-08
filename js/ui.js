@@ -61,6 +61,16 @@ export const UI = {
             tagEditColor: document.getElementById('tag-edit-color'),
             tagEditIconVal: document.getElementById('tag-edit-icon-val'),
             tagEditIcons: document.getElementById('tag-edit-icons'),
+            // Tag Constraints
+            tagEditEnableConstraints: document.getElementById('tag-edit-enable-constraints'),
+            tagConstraintsContainer: document.getElementById('tag-constraints-container'),
+            tagEditReqType: document.getElementById('tag-edit-req-type'),
+            tagEditMetric: document.getElementById('tag-edit-metric'),
+            tagEditMin: document.getElementById('tag-edit-min'),
+            tagEditMax: document.getElementById('tag-edit-max'),
+            tagEditWeight: document.getElementById('tag-edit-weight'),
+            tagWeightContainer: document.getElementById('tag-weight-container'),
+            tagWeightVal: document.getElementById('tag-weight-val'),
             // Whitelist Modal
             whitelistModal: document.getElementById('whitelist-modal'),
             whitelistInput: document.getElementById('whitelist-input'),
@@ -316,13 +326,51 @@ export const UI = {
             this.elements.tagEditName.value = tag.name;
             this.utils.setColoris(this.elements.tagEditColor, tag.color);
             if (tag.icon) selectedIcon = tag.icon;
+            
+            // Populate constraint fields
+            const hasConstraints = !!tag.constraints;
+            this.elements.tagEditEnableConstraints.checked = hasConstraints;
+            if (hasConstraints) {
+                this.elements.tagEditReqType.value = tag.constraints.type || 'mandatory';
+                this.elements.tagEditMetric.value = tag.constraints.metric || 'courses';
+                this.elements.tagEditMin.value = tag.constraints.min !== undefined ? tag.constraints.min : 1;
+                this.elements.tagEditMax.value = tag.constraints.max !== undefined ? tag.constraints.max : '';
+                this.elements.tagEditWeight.value = tag.constraints.weight || 5;
+                this.elements.tagWeightVal.innerText = tag.constraints.weight || 5;
+            }
         } else {
             this.elements.tagEditName.value = '';
             this.utils.setColoris(this.elements.tagEditColor, this.config.defaultTagColor); 
+            this.elements.tagEditEnableConstraints.checked = false;
+            
+            // Reset defaults
+            this.elements.tagEditReqType.value = 'mandatory';
+            this.elements.tagEditMetric.value = 'courses';
+            this.elements.tagEditMin.value = 1;
+            this.elements.tagEditMax.value = '';
+            this.elements.tagEditWeight.value = 5;
+            this.elements.tagWeightVal.innerText = 5;
         }
         
+        this.toggleTagConstraints();
         this.renderIconPicker(selectedIcon);
         this.modals.open(this.elements.tagEditorModal, this.elements.tagEditName);
+    },
+
+    toggleTagConstraints() {
+        const isEnabled = this.elements.tagEditEnableConstraints.checked;
+        const reqType = this.elements.tagEditReqType.value;
+        
+        if (isEnabled) {
+            this.elements.tagConstraintsContainer.classList.remove('hidden');
+            if (reqType === 'optional') {
+                this.elements.tagWeightContainer.classList.remove('hidden');
+            } else {
+                this.elements.tagWeightContainer.classList.add('hidden');
+            }
+        } else {
+            this.elements.tagConstraintsContainer.classList.add('hidden');
+        }
     },
 
     closeTagEditor() {
@@ -336,6 +384,8 @@ export const UI = {
     renderCourseTagsForm(selectedTagIds = []) {
         this.elements.courseTagsContainer.innerHTML = Components.buildCourseTagsFormHTML(selectedTagIds);
     },
+
+    
 
     renderIconPicker(selectedIcon = null) {
         const currentColor = this.elements.tagEditColor.value || this.config.defaultTagColor;
