@@ -86,7 +86,14 @@ export const UI = {
             exportIgnoreHidden: document.getElementById('export-ignore-hidden'),
             exportIgnoreBank: document.getElementById('export-ignore-bank'),
             exportIncludeMeta: document.getElementById('export-include-meta'),
-            exportMetaLabel: document.getElementById('export-meta-label')
+            exportMetaLabel: document.getElementById('export-meta-label'),
+            // Schedule Generator
+            generatorSidebar: document.getElementById('generator-sidebar'),
+            genMaxTerms: document.getElementById('gen-max-terms'),
+            genMaxResults: document.getElementById('gen-max-results'),
+            genMaxTime: document.getElementById('gen-max-time'),
+            savedSchedulesList: document.getElementById('saved-schedules-list'),
+            generatorResultsList: document.getElementById('generator-results-list'),
         };
     },
 
@@ -423,14 +430,22 @@ export const UI = {
         }
     },
 
-    // ==========================================
-    // MISC UI UTILITIES
-    // ==========================================
     openWhitelistModal() {
         this.elements.whitelistInput.value = State.whitelist.join(', ');
         this.modals.open(this.elements.whitelistModal, this.elements.whitelistInput);
     },
 
+    // ==========================================
+    // SCHEDULE GENERATOR
+    // ==========================================
+
+    toggleGeneratorSidebar() {
+        this.elements.generatorSidebar.classList.toggle('-translate-x-full');
+    },
+
+    // ==========================================
+    // MISC UI UTILITIES
+    // ==========================================
     showConfirm(title, msg, onConfirmCallback) {
         this.elements.confirmTitle.innerText = title;
         this.elements.confirmMessage.innerText = msg;
