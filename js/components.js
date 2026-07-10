@@ -30,7 +30,7 @@ export const Components = {
             });
 
             State.terms.forEach(term => {
-                const cell = State.schedule[course.id]?.[term.id];
+                const cell = State.displayedGrid[course.id]?.[term.id];
                 if (cell && cell.active && !cell.hidden) {
                     if (!hasTags) untaggedBreakdown.termTotals[term.id] += credits;
                     else course.tags.forEach(tId => {
@@ -72,8 +72,8 @@ export const Components = {
         </th>`;
         
         State.terms.forEach(term => {
-            let termCredits = Object.keys(State.schedule).reduce((sum, cId) => {
-                const cell = State.schedule[cId]?.[term.id];
+            let termCredits = Object.keys(State.displayedGrid).reduce((sum, cId) => {
+                const cell = State.displayedGrid[cId]?.[term.id];
                 return (cell && cell.active && !cell.hidden) ? sum + (State.courses[cId]?.credits || 0) : sum;
             }, 0);
 
@@ -87,15 +87,22 @@ export const Components = {
                 termBreakdownHTML += `</div>`;
             }
 
+            let termActionMenu = '';
+            if (!State.isPreviewMode) {
+                termActionMenu = `
+                <div class="card-action-menu">
+                    <button onclick="UI.editTerm('${term.id}')" class="btn-icon"><i class="ph ph-pencil-simple text-icon leading-none"></i></button>
+                    <button onclick="App.deleteTerm('${term.id}')" class="btn-icon-danger"><i class="ph ph-trash text-icon leading-none"></i></button>
+                </div>`;
+            }
+            
+
             let styleStr = term.color ? `background-color: ${term.color}; color: ${UI.utils.getContrastColor(term.color)};` : `background-color: var(--bg-surface);`;
             
             html += `<th style="${styleStr}" class="cell-size px-3 py-2 font-bold border-r border-border group text-left border-b align-top">
                 <div class="truncate w-full pr-8 text-header" title="${term.name}">${term.name}</div>
                 <div class="text-xs font-normal opacity-80 mt-0.5">${termCredits} hours</div>
-                <div class="card-action-menu">
-                    <button onclick="UI.editTerm('${term.id}')" class="btn-icon"><i class="ph ph-pencil-simple text-icon leading-none"></i></button>
-                    <button onclick="App.deleteTerm('${term.id}')" class="btn-icon-danger"><i class="ph ph-trash text-icon leading-none"></i></button>
-                </div>
+                ${termActionMenu}
                 ${termBreakdownHTML}
             </th>`;
         });
@@ -116,7 +123,7 @@ export const Components = {
             let visibleHTML = '', hiddenHTML = '';
             sortedCourses.forEach(course => {
                 if (course.id === State.selectedCourseId) return; 
-                const cellData = State.schedule[course.id]?.[term.id];
+                const cellData = State.displayedGrid[course.id]?.[term.id];
                 if (cellData?.active) {
                     if (cellData.hidden) hiddenHTML += this.generateCourseCardHTML(course, term, true, false);
                     else visibleHTML += this.generateCourseCardHTML(course, term, false, false);
@@ -127,7 +134,7 @@ export const Components = {
         });
         html += `</tr>`;
 
-        if (State.selectedCourseId && State.courses[State.selectedCourseId]) {
+        if (!State.isPreviewMode && State.selectedCourseId && State.courses[State.selectedCourseId]) {
             const activeCourse = State.courses[State.selectedCourseId];
             let activeCourseStyle = activeCourse.color ? `background-color: ${activeCourse.color}; color: ${UI.utils.getContrastColor(activeCourse.color)};` : ``;
             
@@ -147,7 +154,7 @@ export const Components = {
                 </td>`;
             
             State.terms.forEach(term => {
-                const cellData = State.schedule[activeCourse.id]?.[term.id];
+                const cellData = State.displayedGrid[activeCourse.id]?.[term.id];
                 html += `<td class="cell-size align-top border-r border-border p-2">`;
                 if (cellData?.active) {
                     html += this.generateCourseCardHTML(activeCourse, term, cellData.hidden, false);
@@ -172,20 +179,26 @@ export const Components = {
             html += `<tr class="hover:bg-surface-hover transition-colors" data-course-row="${course.id}">`;
             let cStyleStr = course.color ? `background-color: ${course.color}; color: ${UI.utils.getContrastColor(course.color)};` : `background-color: var(--bg-surface-mid);`;
 
+            let courseActionMenu = '';
+            if (!State.isPreviewMode) {
+                courseActionMenu = `
+                <div class="card-action-menu">
+                    <button onclick="UI.editCourse('${course.id}')" class="btn-icon"><i class="ph ph-pencil-simple text-icon leading-none"></i></button>
+                    <button onclick="App.deleteCourse('${course.id}')" class="btn-icon-danger"><i class="ph ph-trash text-icon leading-none"></i></button>
+                </div>`;
+            }
+
             html += `
                 <td style="${cStyleStr}" class="cell-size course-cell-height sticky-col px-3 py-2 align-top group border-b border-border">
                     <div class="flex justify-between items-start relative">
                         <span class="font-bold text-course-id leading-tight truncate pr-8" title="${course.id}">${course.id} <span class="font-normal text-course-credits opacity-80">(${course.credits})</span></span>
-                        <div class="card-action-menu">
-                            <button onclick="UI.editCourse('${course.id}')" class="btn-icon"><i class="ph ph-pencil-simple text-icon leading-none"></i></button>
-                            <button onclick="App.deleteCourse('${course.id}')" class="btn-icon-danger"><i class="ph ph-trash text-icon leading-none"></i></button>
-                        </div>
+                        ${courseActionMenu}
                     </div>
                     <div class="text-course-title opacity-90 truncate leading-tight mt-0.5" title="${course.title}">${course.title}</div>
                 </td>`;
 
             State.terms.forEach(term => {
-                const cellData = State.schedule[course.id]?.[term.id];
+                const cellData = State.displayedGrid[course.id]?.[term.id];
                 html += `<td class="cell-size course-cell-height p-0 align-top border-r border-b border-border bg-surface relative" onclick="App.toggleCell('${course.id}', '${term.id}')">`;
                 if (cellData?.active) html += this.generateCourseCardHTML(course, term, cellData.hidden, false);
                 html += `</td>`;
@@ -197,8 +210,8 @@ export const Components = {
 
     generateCourseCardHTML(course, term, isHidden, isBankCard = false) {
         let instanceCount = 0;
-        if (State.schedule[course.id]) {
-            instanceCount = Object.values(State.schedule[course.id]).filter(cell => cell.active).length;
+        if (State.displayedGrid[course.id]) {
+            instanceCount = Object.values(State.displayedGrid[course.id]).filter(cell => cell.active).length;
         }
 
         const isSingleton = instanceCount === 1;
@@ -227,12 +240,16 @@ export const Components = {
             tagDots += `</div>`;
         }
 
-        let actionButtons = isBankCard 
-            ? `<button class="btn-icon" onclick="event.stopPropagation(); UI.editCourse('${course.id}')" title="Edit Course"><i class="ph ph-pencil-simple text-icon leading-none"></i></button>
-               <button class="btn-icon-danger" onclick="event.stopPropagation(); App.deleteCourse('${course.id}')" title="Delete Course"><i class="ph ph-trash text-icon leading-none"></i></button>`
-            : `<button class="btn-icon-danger" onclick="App.hideDeadEnds(event, '${course.id}', '${term.id}')" title="Hide Dead Ends for this sequence"><i class="ph ph-magic-wand text-icon leading-none"></i></button>
-               <button class="btn-icon" onclick="App.toggleHidden(event, '${course.id}', '${term.id}')" title="Toggle active status"><i class="ph ${eyeIcon} text-icon leading-none"></i></button>
-               <button class="btn-icon-danger" onclick="App.removeCard(event, '${course.id}', '${term.id}')" title="Remove from term"><i class="ph ph-x text-icon leading-none"></i></button>`;
+        let actionButtons = '';
+        if (!State.isPreviewMode) {
+            actionButtons = isBankCard 
+                ? `<button class="btn-icon" onclick="event.stopPropagation(); UI.editCourse('${course.id}')" title="Edit Course"><i class="ph ph-pencil-simple text-icon leading-none"></i></button>
+                   <button class="btn-icon-danger" onclick="event.stopPropagation(); App.deleteCourse('${course.id}')" title="Delete Course"><i class="ph ph-trash text-icon leading-none"></i></button>`
+                : `<button class="btn-icon-danger" onclick="App.hideDeadEnds(event, '${course.id}', '${term.id}')" title="Hide Dead Ends for this sequence"><i class="ph ph-magic-wand text-icon leading-none"></i></button>
+                   <button class="btn-icon" onclick="App.toggleHidden(event, '${course.id}', '${term.id}')" title="Toggle active status"><i class="ph ${eyeIcon} text-icon leading-none"></i></button>
+                   <button class="btn-icon-danger" onclick="App.removeCard(event, '${course.id}', '${term.id}')" title="Remove from term"><i class="ph ph-x text-icon leading-none"></i></button>`;
+        }
+        
 
         return `
             <div style="${cStyleStr}" class="course-card ${compactClass} ${hiddenClass} ${selectedClass} card-node flex flex-col justify-between group/card relative overflow-hidden" 
@@ -245,7 +262,7 @@ export const Components = {
                  </div>
                  ${course.joint && course.joint.length ? `<div class="text-course-joint mt-auto font-medium opacity-80 truncate leading-tight pb-0.5 italic" title="Joint: ${course.joint.join(', ')}">Joint: ${course.joint.join(', ')}</div>` : `<div class="mt-auto"></div>`}
                  ${tagDots}
-                 <div class="card-action-menu">${actionButtons}</div>
+                 ${!State.isPreviewMode ? `<div class="card-action-menu">${actionButtons}</div>` : ''}
             </div>`;
     },
 

@@ -94,6 +94,11 @@ export const UI = {
             genMaxTime: document.getElementById('gen-max-time'),
             savedSchedulesList: document.getElementById('saved-schedules-list'),
             generatorResultsList: document.getElementById('generator-results-list'),
+            // Header & Sidebar Schedule Info
+            activeScheduleName: document.getElementById('active-schedule-name'),
+            previewScheduleName: document.getElementById('preview-schedule-name'),
+            previewScheduleText: document.getElementById('preview-schedule-text'),
+            sidebarActiveName: document.getElementById('sidebar-active-name'),
         };
     },
 
@@ -179,6 +184,29 @@ export const UI = {
     // CORE RENDERING 
     // ==========================================
     renderTable() {
+        const activeSched = State.schedules[State.activeScheduleId];
+        if (activeSched) {
+            this.elements.activeScheduleName.value = activeSched.name;
+            if (this.elements.sidebarActiveName) {
+                this.elements.sidebarActiveName.innerText = activeSched.name;
+            }
+        }
+
+        // Toggle Preview Header
+        if (State.isPreviewMode) {
+            const displayedSched = State.schedules[State.displayedScheduleId];
+            this.elements.activeScheduleName.classList.add('hidden');
+            if (this.elements.previewScheduleName) {
+                this.elements.previewScheduleName.classList.remove('hidden');
+                this.elements.previewScheduleText.innerText = displayedSched.name;
+            }
+        } else {
+            this.elements.activeScheduleName.classList.remove('hidden');
+            if (this.elements.previewScheduleName) {
+                this.elements.previewScheduleName.classList.add('hidden');
+            }
+        }
+        
         let savedScrollPos = 0;
         const existingContainer = document.querySelector('.course-bank-container');
         if (existingContainer) savedScrollPos = existingContainer.scrollTop;
@@ -197,6 +225,60 @@ export const UI = {
         }
 
         if (State.pinnedNode) this.handleMouseOver(State.pinnedNode.cId, State.pinnedNode.tId, true);
+    },
+
+    renderSidebarSchedules() {
+        if (!this.elements.savedSchedulesList) return;
+
+        const schedIds = Object.keys(State.schedules).filter(id => id !== State.activeScheduleId);
+        const anyPinned = !!State.pinnedScheduleId; // Check if ANY schedule is currently pinned
+        
+        if (schedIds.length === 0) {
+            this.elements.savedSchedulesList.innerHTML = `
+                <div class="text-[0.7rem] text-text-muted italic p-3 text-center border border-dashed border-border rounded bg-canvas">
+                    No saved schedules.
+                </div>`;
+            return;
+        }
+
+        let html = '';
+        schedIds.forEach(id => {
+            const sched = State.schedules[id];
+            const isPinned = State.pinnedScheduleId === id;
+            
+            let activeClass = '';
+            let textClass = '';
+
+            if (isPinned) {
+                // Pinned State: Full blue highlight with gold border
+                activeClass = 'selected-card bg-[var(--color-hover)] shadow-md';
+                textClass = 'text-main';
+            } else if (anyPinned) {
+                // Gray Hover State: Something else is pinned, preview is locked
+                activeClass = 'border-border bg-surface hover:bg-surface-hover hover:border-border-border';
+                textClass = 'text-text-main group-hover:text-text-main';
+            } else {
+                // Blue Hover State: Nothing pinned, ready to preview
+                activeClass = 'border-border bg-surface hover:bg-[var(--color-hover)] hover:border-[var(--color-hover)]';
+                textClass = 'text-text-main group-hover:text-main';
+            }
+            
+            html += `
+            <div class="border ${activeClass} rounded-md shadow-sm p-2 flex items-center group relative cursor-pointer transition-colors duration-200"
+                 onmouseenter="App.hoverSchedule('${id}')"
+                 onmouseleave="App.unhoverSchedule()"
+                 onclick="App.togglePinSchedule('${id}')">
+                
+                <span class="text-sm font-medium ${textClass} transition-colors truncate text-left w-full pr-14" title="${sched.name}">${sched.name}</span>
+                
+                <div class="card-action-menu" style="top: 0.125rem; right: 0.125rem;">
+                    <button onclick="App.switchSchedule(event, '${id}')" class="btn-icon" title="Make Active"><i class="ph ph-arrow-right text-icon leading-none"></i></button>
+                    <button onclick="App.deleteSchedule(event, '${id}')" class="btn-icon-danger" title="Delete Schedule"><i class="ph ph-trash text-icon leading-none"></i></button>
+                </div>
+            </div>`;
+        });
+        
+        this.elements.savedSchedulesList.innerHTML = html;
     },
 
     // ==========================================

@@ -6,10 +6,10 @@ export const Storage = {
         localStorage.setItem('curriculumMap', JSON.stringify({
             terms: State.terms,
             courses: State.courses,
-            schedule: State.schedule,
+            schedules: State.schedules,
+            activeScheduleId: State.activeScheduleId,
             whitelist: State.whitelist,
-            tags: State.tags,
-            savedSchedules: State.savedSchedules
+            tags: State.tags
         }));
     },
     load() {
@@ -54,10 +54,10 @@ export const Storage = {
         const data = JSON.stringify({
             terms: State.terms,
             courses: State.courses,
-            schedule: State.schedule,
+            schedules: State.schedules,
+            activeScheduleId: State.activeScheduleId,
             whitelist: State.whitelist,
-            tags: State.tags,
-            savedSchedules: State.savedSchedules
+            tags: State.tags
         }, null, 2);
         
         const blob = new Blob([data], { type: "application/json" });
@@ -208,6 +208,8 @@ export const Storage = {
             return alert("Spreadsheet library is still loading. Please try again in a moment.");
         }
 
+        const activeGrid = State.schedules[State.activeScheduleId]?.grid || {};
+
         let exportRows = [];
 
         // Helper to convert tag IDs into readable names
@@ -226,7 +228,7 @@ export const Storage = {
             
             sortedCourseIds.forEach(cId => {
                 const course = State.courses[cId];
-                const cell = State.schedule[cId]?.[term.id];
+                const cell = activeGrid[cId]?.[term.id];
 
                 if (cell && cell.active) {
                     if (config.ignoreHidden && cell.hidden) return; // Apply Hidden Filter
@@ -257,7 +259,7 @@ export const Storage = {
             
             sortedCourseIds.forEach(cId => {
                 const course = State.courses[cId];
-                const sched = State.schedule[cId];
+                const sched = activeGrid[cId];
                 
                 // Check if it's active in ANY term
                 let isScheduled = false;
@@ -337,6 +339,7 @@ export const Storage = {
             try {
                 State.hydrate(JSON.parse(e.target.result));
                 Storage.save();
+                UI.renderSidebarSchedules(); // Added line
                 UI.renderTable();
             } catch(err) { alert("Invalid JSON file"); }
         };

@@ -1,11 +1,34 @@
 export const State = {
-    // Persistent Data 
     terms: [], 
     courses: {}, 
-    schedule: {}, 
     whitelist: [],
     tags: [],
-    savedSchedules: [],
+    
+    schedules: {},
+    activeScheduleId: null,
+    
+    // The grid strictly tied to editing
+    get activeGrid() {
+        if (!this.activeScheduleId || !this.schedules[this.activeScheduleId]) return {};
+        return this.schedules[this.activeScheduleId].grid;
+    },
+    
+    // The schedule ID we should visually render
+    get displayedScheduleId() {
+        return this.pinnedScheduleId || this.hoveredScheduleId || this.activeScheduleId;
+    },
+    
+    // The grid we should visually render
+    get displayedGrid() {
+        const id = this.displayedScheduleId;
+        if (!id || !this.schedules[id]) return {};
+        return this.schedules[id].grid;
+    },
+    
+    // Boolean check to disable editing interfaces
+    get isPreviewMode() {
+        return this.displayedScheduleId !== this.activeScheduleId;
+    },
     
     // Ephemeral UI State
     compactMode: false,
@@ -25,26 +48,44 @@ export const State = {
             { id: 't-6', name: 'SPR 28', color: '' }
         ];
         this.courses = {};
-        this.schedule = {};
         this.whitelist = [];
         this.tags = [];
-        this.savedSchedules = [];
         
-        // Reset Ephemeral State
+        // Initialize Default Schedule
+        this.activeScheduleId = 'sched-' + Date.now();
+        this.schedules = {
+            [this.activeScheduleId]: {
+                name: 'Draft Schedule',
+                lastModified: Date.now(),
+                grid: {}
+            }
+        };
+        
         this.compactMode = false;
         this.showBreakdown = false;
         this.selectedCourseId = null;
         this.pinnedNode = null;
-        this.hoveredScheduleId = null;
-        this.pinnedScheduleId = null;
     },
 
     hydrate(parsed) {
         this.terms = parsed.terms || [];
         this.courses = parsed.courses || {};
-        this.schedule = parsed.schedule || {};
         this.whitelist = parsed.whitelist || [];
         this.tags = parsed.tags || [];
-        this.savedSchedules = parsed.savedSchedules || [];
+
+        // Support new schema or migrate legacy schema
+        if (parsed.schedules && parsed.activeScheduleId) {
+            this.schedules = parsed.schedules;
+            this.activeScheduleId = parsed.activeScheduleId;
+        } else if (parsed.schedule) {
+            this.activeScheduleId = 'sched-' + Date.now();
+            this.schedules = {
+                [this.activeScheduleId]: {
+                    name: 'Imported Schedule',
+                    lastModified: Date.now(),
+                    grid: parsed.schedule
+                }
+            };
+        }
     }
 };

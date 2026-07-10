@@ -2,9 +2,10 @@ import { State } from './state.js';
 
 export const HoverEngine = {
     getValidInstances(courseId) {
-        if(!State.schedule[courseId]) return [];
+        const displayedGrid = State.displayedGrid;
+        if(!displayedGrid[courseId]) return [];
         let indices = [];
-        for (const [termId, data] of Object.entries(State.schedule[courseId])) {
+        for (const [termId, data] of Object.entries(displayedGrid[courseId])) {
             if (data.active && !data.hidden) {
                 const idx = State.terms.findIndex(t => t.id === termId);
                 if (idx !== -1) indices.push(idx);
