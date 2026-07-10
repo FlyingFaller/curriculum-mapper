@@ -6,7 +6,7 @@ export const Components = {
     // DATA CALCULATION
     // ==========================================
     calculateBreakdowns() {
-        if (!UI.showBreakdown) return [];
+        if (!State.showBreakdown) return [];
         let tagsBreakdown = State.tags.map(t => ({
             id: t.id, name: t.name, color: t.color,
             icon: t.icon ? t.icon.replace('-fill', '') : 'ph-circle',
@@ -51,7 +51,7 @@ export const Components = {
         let totalBankCredits = Object.values(State.courses).reduce((sum, c) => sum + (c.credits || 0), 0);
         
         let bankBreakdownHTML = '';
-        if (UI.showBreakdown) {
+        if (State.showBreakdown) {
             bankBreakdownHTML = `<div class="flex flex-col gap-1 w-full">`;
             breakdowns.forEach(tb => {
                 const iconHTML = tb.id === 'untagged' ? `<i class="ph ${tb.icon} text-xs" style="color: ${tb.color}"></i>` : `<i class="ph-fill ${tb.icon} text-xs drop-shadow-sm" style="color: ${tb.color}"></i>`;
@@ -66,7 +66,7 @@ export const Components = {
 
         let html = `<tr class="bg-surface">
         <th class="cell-size sticky-col px-3 py-2 z-30 border-b border-border bg-surface-alt align-top">
-            <div class="font-bold text-header" title="${UI.compactMode ? 'Course Bank' : 'Courses'}">${UI.compactMode ? 'Course Bank' : 'Courses'}</div>
+            <div class="font-bold text-header" title="${State.compactMode ? 'Course Bank' : 'Courses'}">${State.compactMode ? 'Course Bank' : 'Courses'}</div>
             <div class="text-xs font-normal opacity-80 mt-0.5">${totalBankCredits} hours</div>
             ${bankBreakdownHTML}
         </th>`;
@@ -78,7 +78,7 @@ export const Components = {
             }, 0);
 
             let termBreakdownHTML = '';
-            if (UI.showBreakdown) {
+            if (State.showBreakdown) {
                 termBreakdownHTML = `<div class="flex flex-col gap-1 w-full">`;
                 breakdowns.forEach(tb => {
                     const displayTotal = tb.termTotals[term.id] > 0 ? `${tb.termTotals[term.id]} cr` : `<span class="opacity-40">0 cr</span>`;
@@ -115,7 +115,7 @@ export const Components = {
                 <div class="flex flex-col gap-2 w-full">`;
             let visibleHTML = '', hiddenHTML = '';
             sortedCourses.forEach(course => {
-                if (course.id === UI.selectedCourseId) return; 
+                if (course.id === State.selectedCourseId) return; 
                 const cellData = State.schedule[course.id]?.[term.id];
                 if (cellData?.active) {
                     if (cellData.hidden) hiddenHTML += this.generateCourseCardHTML(course, term, true, false);
@@ -127,8 +127,8 @@ export const Components = {
         });
         html += `</tr>`;
 
-        if (UI.selectedCourseId && State.courses[UI.selectedCourseId]) {
-            const activeCourse = State.courses[UI.selectedCourseId];
+        if (State.selectedCourseId && State.courses[State.selectedCourseId]) {
+            const activeCourse = State.courses[State.selectedCourseId];
             let activeCourseStyle = activeCourse.color ? `background-color: ${activeCourse.color}; color: ${UI.utils.getContrastColor(activeCourse.color)};` : ``;
             
             html += `<tr class="sticky-bottom-row">
@@ -207,9 +207,9 @@ export const Components = {
         const singletonStyles = isSingleton ? 'text-accent' : '';
         const hiddenClass = isHidden ? 'hidden-instance' : '';
         const eyeIcon = isHidden ? 'ph-eye-slash' : 'ph-eye';
-        const compactClass = UI.compactMode ? 'compact-mode-card shrink-0' : '';
-        const isPinned = UI.pinnedNode && UI.pinnedNode.cId === course.id && UI.pinnedNode.tId === (term ? term.id : 'bank');
-        const selectedClass = (isBankCard && course.id === UI.selectedCourseId) || isPinned ? 'selected-card' : '';
+        const compactClass = State.compactMode ? 'compact-mode-card shrink-0' : '';
+        const isPinned = State.pinnedNode && State.pinnedNode.cId === course.id && State.pinnedNode.tId === (term ? term.id : 'bank');
+        const selectedClass = (isBankCard && course.id === State.selectedCourseId) || isPinned ? 'selected-card' : '';
         
         let cStyleStr = (isBankCard && course.color) ? `background-color: ${course.color}; color: ${UI.utils.getContrastColor(course.color)};` : ``;
         let onClickHandler = isBankCard ? `onclick="App.selectCourse('${course.id}')"` : `onclick="App.togglePin(event, '${course.id}', '${term ? term.id : 'bank'}')"`;

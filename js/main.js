@@ -21,7 +21,7 @@ const App = {
         UI.initResizer();
 
         document.addEventListener('keydown', (e) => {
-            if (e.key === 'Escape' && UI.pinnedNode) {
+            if (e.key === 'Escape' && State.pinnedNode) {
                 App.clearPin();
             }
         });
@@ -31,13 +31,13 @@ const App = {
     // GLOBAL ACTIONS
     // ==========================================
     toggleCompactMode() {
-        UI.compactMode = !UI.compactMode;
-        if (!UI.compactMode) UI.selectedCourseId = null; 
+        State.compactMode = !State.compactMode;
+        if (!State.compactMode) State.selectedCourseId = null; 
         
         const btn = UI.elements.compactToggle;
         const icon = btn.querySelector('i');
         
-        if (UI.compactMode) {
+        if (State.compactMode) {
             icon.className = 'ph ph-rows text-xl';
             btn.classList.add('text-accent');
             btn.classList.remove('text-text-muted');
@@ -50,10 +50,10 @@ const App = {
     },
 
     toggleBreakdown() {
-        UI.showBreakdown = !UI.showBreakdown;
+        State.showBreakdown = !State.showBreakdown;
         
         const btn = UI.elements.breakdownToggle;
-        if (UI.showBreakdown) {
+        if (State.showBreakdown) {
             btn.classList.add('text-accent');
             btn.classList.remove('text-text-muted');
         } else {
@@ -285,23 +285,23 @@ const App = {
     // ==========================================
     togglePin(event, courseId, termId) {
         event.stopPropagation(); 
-        if (UI.pinnedNode && UI.pinnedNode.cId === courseId && UI.pinnedNode.tId === termId) {
+        if (State.pinnedNode && State.pinnedNode.cId === courseId && State.pinnedNode.tId === termId) {
             this.clearPin();
         } else {
-            UI.pinnedNode = { cId: courseId, tId: termId };
+            State.pinnedNode = { cId: courseId, tId: termId };
             UI.renderTable(); 
             UI.handleMouseOver(courseId, termId, true);
         }
     },
 
     clearPin() {
-        UI.pinnedNode = null;
+        State.pinnedNode = null;
         UI.renderTable();
         UI.handleMouseOut();
     },
 
     selectCourse(courseId) {
-        UI.selectedCourseId = (UI.selectedCourseId === courseId) ? null : courseId;
+        State.selectedCourseId = (State.selectedCourseId === courseId) ? null : courseId;
         UI.renderTable();
     },
 

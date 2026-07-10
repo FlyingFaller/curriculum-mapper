@@ -8,7 +8,8 @@ export const Storage = {
             courses: State.courses,
             schedule: State.schedule,
             whitelist: State.whitelist,
-            tags: State.tags
+            tags: State.tags,
+            savedSchedules: State.savedSchedules
         }));
     },
     load() {
@@ -55,7 +56,8 @@ export const Storage = {
             courses: State.courses,
             schedule: State.schedule,
             whitelist: State.whitelist,
-            tags: State.tags
+            tags: State.tags,
+            savedSchedules: State.savedSchedules
         }, null, 2);
         
         const blob = new Blob([data], { type: "application/json" });
@@ -164,7 +166,7 @@ export const Storage = {
                             border-right: 1px solid var(--border-color) !important;
                         }
                         ${config.ignoreHidden ? '.hidden-instance { display: none !important; }' : ''}
-                        ${UI.compactMode ? `
+                        ${State.compactMode ? `
                             .compact-table th:first-child,
                             .compact-table .course-bank-cell,
                             .compact-table .sticky-bottom-row td:first-child {

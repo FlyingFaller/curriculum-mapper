@@ -1,5 +1,5 @@
 export const State = {
-    // 1. Persistent Data (Saved to LocalStorage / Exported)
+    // Persistent Data 
     terms: [], 
     courses: {}, 
     schedule: {}, 
@@ -7,15 +7,13 @@ export const State = {
     tags: [],
     savedSchedules: [],
     
-    // 2. Ephemeral UI State (Reset on reload)
-    ui: {
-        compactMode: false,
-        showBreakdown: false,
-        selectedCourseId: null,
-        pinnedNode: null,
-        hoveredScheduleId: null,
-        pinnedScheduleId: null
-    },
+    // Ephemeral UI State
+    compactMode: false,
+    showBreakdown: false,
+    selectedCourseId: null,
+    pinnedNode: null,
+    hoveredScheduleId: null,
+    pinnedScheduleId: null,
 
     initDefault() {
         this.terms = [
@@ -32,14 +30,13 @@ export const State = {
         this.tags = [];
         this.savedSchedules = [];
         
-        this.ui = {
-            compactMode: false,
-            showBreakdown: false,
-            selectedCourseId: null,
-            pinnedNode: null,
-            hoveredScheduleId: null,
-            pinnedScheduleId: null
-        };
+        // Reset Ephemeral State
+        this.compactMode = false;
+        this.showBreakdown = false;
+        this.selectedCourseId = null;
+        this.pinnedNode = null;
+        this.hoveredScheduleId = null;
+        this.pinnedScheduleId = null;
     },
 
     hydrate(parsed) {
@@ -49,9 +46,5 @@ export const State = {
         this.whitelist = parsed.whitelist || [];
         this.tags = parsed.tags || [];
         this.savedSchedules = parsed.savedSchedules || [];
-
-        Object.values(this.courses).forEach(c => {
-            c.tags = c.tags || []; 
-        });
     }
 };

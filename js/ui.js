@@ -13,10 +13,10 @@ export const UI = {
         colorisSwatches: [ '#ffffff', '#fca5a5', '#fdba74', '#fde047', '#86efac', '#93c5fd', '#d8b4fe', '#f9a8d4' ]
     },
     
-    compactMode: false,
-    showBreakdown: false,
-    selectedCourseId: null,
-    pinnedNode: null,
+    // compactMode: false,
+    // showBreakdown: false,
+    // selectedCourseId: null,
+    // pinnedNode: null,
 
     elements: {}, 
 
@@ -183,12 +183,12 @@ export const UI = {
         const existingContainer = document.querySelector('.course-bank-container');
         if (existingContainer) savedScrollPos = existingContainer.scrollTop;
 
-        this.elements.scheduleTable.classList.toggle('compact-table', this.compactMode);
+        this.elements.scheduleTable.classList.toggle('compact-table', State.compactMode);
         this.elements.tableHead.innerHTML = Components.buildHeaders();
         
         const sortedCourses = Object.values(State.courses).sort((a,b) => a.id.localeCompare(b.id));
 
-        if (this.compactMode) {
+        if (State.compactMode) {
             this.elements.tableBody.innerHTML = Components.buildCompactBody(sortedCourses);
             const newContainer = document.querySelector('.course-bank-container');
             if (newContainer) newContainer.scrollTop = savedScrollPos;
@@ -196,7 +196,7 @@ export const UI = {
             this.elements.tableBody.innerHTML = Components.buildStandardBody(sortedCourses);
         }
 
-        if (this.pinnedNode) this.handleMouseOver(this.pinnedNode.cId, this.pinnedNode.tId, true);
+        if (State.pinnedNode) this.handleMouseOver(State.pinnedNode.cId, State.pinnedNode.tId, true);
     },
 
     // ==========================================
@@ -228,7 +228,7 @@ export const UI = {
     },
 
     handleMouseOver(cId, tId, forceHighlight = false) {
-        if (this.pinnedNode && !forceHighlight) {
+        if (State.pinnedNode && !forceHighlight) {
             this.updateFooter(cId);
             return; 
         }
@@ -257,8 +257,8 @@ export const UI = {
     },
 
     handleMouseOut() {
-        if (this.pinnedNode) {
-            this.updateFooter(this.pinnedNode.cId);
+        if (State.pinnedNode) {
+            this.updateFooter(State.pinnedNode.cId);
             return;
         }
         this.elements.descTitle.innerText = "Hover over a course";
