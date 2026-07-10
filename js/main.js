@@ -146,25 +146,10 @@ const App = {
         const colorVal = UI.elements.courseColor.value;
         const color = colorVal !== UI.config.defaultCourseColor ? colorVal : '';
 
+        // Safely update all relational references centrally
         if (originalId && originalId !== id) {
             if (State.courses[id]) return alert("A course with this new ID already exists!");
-            
-            State.courses[id] = State.courses[originalId];
-            State.courses[id].id = id;
-            delete State.courses[originalId];
-            
-            Object.values(State.schedules).forEach(sched => {
-                if (sched.grid[originalId]) {
-                    sched.grid[id] = sched.grid[originalId];
-                    delete sched.grid[originalId];
-                }
-            });
-            
-            Object.values(State.courses).forEach(c => {
-                c.prereqs = c.prereqs.map(req => req === originalId ? id : req);
-                c.coreqs = c.coreqs.map(req => req === originalId ? id : req);
-                c.joint = c.joint.map(req => req === originalId ? id : req);
-            });
+            State.updateCourseId(originalId, id);
         }
 
         const selectedTags = Array.from(document.querySelectorAll('.course-tag-checkbox:checked')).map(cb => cb.value);
@@ -188,15 +173,7 @@ const App = {
 
     deleteCourse(courseId) {
         UI.showConfirm("Delete Course", `Delete course ${courseId} completely?`, () => {
-            delete State.courses[courseId];
-            Object.values(State.schedules).forEach(sched => {
-                delete sched.grid[courseId];
-            });
-            Object.values(State.courses).forEach(c => {
-                c.prereqs = c.prereqs.filter(req => req !== courseId);
-                c.coreqs = c.coreqs.filter(req => req !== courseId);
-                c.joint = c.joint.filter(req => req !== courseId);
-            });
+            State.deleteCourse(courseId);
             Storage.save();
             UI.renderTable();
         });
@@ -404,22 +381,6 @@ const App = {
 
         Storage.save();
         UI.renderSidebarSchedules();
-    },
-
-    switchSchedule(scheduleId) {
-        if (State.schedules[scheduleId]) {
-            State.activeScheduleId = scheduleId;
-            Storage.save();
-            UI.renderTable(); 
-        }
-    },
-
-    deleteSchedule(scheduleId) {
-        UI.showConfirm("Delete Schedule", "Are you sure you want to permanently delete this schedule?", () => {
-            delete State.schedules[scheduleId];
-            Storage.save();
-            UI.renderSidebarSchedules();
-        });
     },
 
     hoverSchedule(id) {

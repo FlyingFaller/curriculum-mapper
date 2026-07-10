@@ -7,17 +7,25 @@ export const Components = {
     // ==========================================
     calculateBreakdowns() {
         if (!State.showBreakdown) return [];
-        let tagsBreakdown = State.tags.map(t => ({
-            id: t.id, name: t.name, color: t.color,
-            icon: t.icon ? t.icon.replace('-fill', '') : 'ph-circle',
-            bankTotal: 0, termTotals: {}
-        }));
+        
+        // Fast O(1) Map lookup for rendering
+        let tagsMap = new Map();
+        State.tags.forEach(t => {
+            tagsMap.set(t.id, {
+                id: t.id, name: t.name, color: t.color,
+                icon: t.icon ? t.icon.replace('-fill', '') : 'ph-circle',
+                bankTotal: 0, termTotals: {}
+            });
+        });
+        
         let untaggedBreakdown = { id: 'untagged', name: 'Untagged', color: 'var(--text-muted)', icon: 'ph-minus', bankTotal: 0, termTotals: {} };
 
         State.terms.forEach(term => {
-            tagsBreakdown.forEach(tb => tb.termTotals[term.id] = 0);
+            tagsMap.forEach(tb => tb.termTotals[term.id] = 0);
             untaggedBreakdown.termTotals[term.id] = 0;
         });
+
+        const assignments = State.termAssignments;
 
         Object.values(State.courses).forEach(course => {
             const credits = course.credits || 0;
@@ -25,22 +33,30 @@ export const Components = {
             
             if (!hasTags) untaggedBreakdown.bankTotal += credits;
             else course.tags.forEach(tId => {
-                const tagObj = tagsBreakdown.find(t => t.id === tId);
+                const tagObj = tagsMap.get(tId);
                 if (tagObj) tagObj.bankTotal += credits;
             });
+        });
 
-            State.terms.forEach(term => {
-                const cell = State.displayedGrid[course.id]?.[term.id];
-                if (cell && cell.active && !cell.hidden) {
-                    if (!hasTags) untaggedBreakdown.termTotals[term.id] += credits;
-                    else course.tags.forEach(tId => {
-                        const tagObj = tagsBreakdown.find(t => t.id === tId);
-                        if (tagObj) tagObj.termTotals[term.id] += credits;
-                    });
-                }
+        // Calculate term totals utilizing cached assignments instead of entire course list
+        State.terms.forEach(term => {
+            const activeCourseIds = assignments[term.id] || [];
+            activeCourseIds.forEach(cId => {
+                const course = State.courses[cId];
+                if (!course) return;
+                
+                const credits = course.credits || 0;
+                const hasTags = course.tags && course.tags.length > 0;
+                
+                if (!hasTags) untaggedBreakdown.termTotals[term.id] += credits;
+                else course.tags.forEach(tId => {
+                    const tagObj = tagsMap.get(tId);
+                    if (tagObj) tagObj.termTotals[term.id] += credits;
+                });
             });
         });
-        return [...tagsBreakdown, untaggedBreakdown];
+
+        return [...Array.from(tagsMap.values()), untaggedBreakdown];
     },
 
     // ==========================================
@@ -72,10 +88,9 @@ export const Components = {
         </th>`;
         
         State.terms.forEach(term => {
-            let termCredits = Object.keys(State.displayedGrid).reduce((sum, cId) => {
-                const cell = State.displayedGrid[cId]?.[term.id];
-                return (cell && cell.active && !cell.hidden) ? sum + (State.courses[cId]?.credits || 0) : sum;
-            }, 0);
+            // Replaced O(N) course array filtering with O(1) assignments access
+            const activeCourseIds = State.termAssignments[term.id] || [];
+            let termCredits = activeCourseIds.reduce((sum, cId) => sum + (State.courses[cId]?.credits || 0), 0);
 
             let termBreakdownHTML = '';
             if (State.showBreakdown) {
@@ -96,7 +111,6 @@ export const Components = {
                 </div>`;
             }
             
-
             let styleStr = term.color ? `background-color: ${term.color}; color: ${UI.utils.getContrastColor(term.color)};` : `background-color: var(--bg-surface);`;
             
             html += `<th style="${styleStr}" class="cell-size px-3 py-2 font-bold border-r border-border group text-left border-b align-top">
@@ -208,6 +222,40 @@ export const Components = {
         return html;
     },
 
+    // --- Sub-components for Course Cards ---
+    _buildCardTagDots(tags) {
+        if (!tags || tags.length === 0) return '';
+        let html = `<div class="card-tag-dots">`;
+        tags.forEach(tId => {
+            const tag = State.tags.find(t => t.id === tId);
+            if (tag) {
+                const iconClass = tag.icon || 'ph-circle';
+                html += `<i class="ph-fill ${iconClass} text-[0.8rem] drop-shadow-sm" style="color: ${tag.color}" title="${tag.name}"></i>`;
+            }
+        });
+        html += `</div>`;
+        return html;
+    },
+
+    _buildCardActionMenu(course, term, isBankCard, isHidden) {
+        if (State.isPreviewMode) return '';
+        const eyeIcon = isHidden ? 'ph-eye-slash' : 'ph-eye';
+        let buttons = '';
+        
+        if (isBankCard) {
+            buttons = `
+                <button class="btn-icon" onclick="event.stopPropagation(); UI.editCourse('${course.id}')" title="Edit Course"><i class="ph ph-pencil-simple text-icon leading-none"></i></button>
+                <button class="btn-icon-danger" onclick="event.stopPropagation(); App.deleteCourse('${course.id}')" title="Delete Course"><i class="ph ph-trash text-icon leading-none"></i></button>`;
+        } else {
+            buttons = `
+                <button class="btn-icon-danger" onclick="App.hideDeadEnds(event, '${course.id}', '${term.id}')" title="Hide Dead Ends for this sequence"><i class="ph ph-magic-wand text-icon leading-none"></i></button>
+                <button class="btn-icon" onclick="App.toggleHidden(event, '${course.id}', '${term.id}')" title="Toggle active status"><i class="ph ${eyeIcon} text-icon leading-none"></i></button>
+                <button class="btn-icon-danger" onclick="App.removeCard(event, '${course.id}', '${term.id}')" title="Remove from term"><i class="ph ph-x text-icon leading-none"></i></button>`;
+        }
+        
+        return `<div class="card-action-menu">${buttons}</div>`;
+    },
+
     generateCourseCardHTML(course, term, isHidden, isBankCard = false) {
         let instanceCount = 0;
         if (State.displayedGrid[course.id]) {
@@ -215,11 +263,8 @@ export const Components = {
         }
 
         const isSingleton = instanceCount === 1;
-        // const singletonStyles = isSingleton ? 'italic text-accent' : '';
-        // const singletonStyles = isSingleton ? 'italic' : '';
         const singletonStyles = isSingleton ? 'text-accent' : '';
         const hiddenClass = isHidden ? 'hidden-instance' : '';
-        const eyeIcon = isHidden ? 'ph-eye-slash' : 'ph-eye';
         const compactClass = State.compactMode ? 'compact-mode-card shrink-0' : '';
         const isPinned = State.pinnedNode && State.pinnedNode.cId === course.id && State.pinnedNode.tId === (term ? term.id : 'bank');
         const selectedClass = (isBankCard && course.id === State.selectedCourseId) || isPinned ? 'selected-card' : '';
@@ -227,42 +272,16 @@ export const Components = {
         let cStyleStr = (isBankCard && course.color) ? `background-color: ${course.color}; color: ${UI.utils.getContrastColor(course.color)};` : ``;
         let onClickHandler = isBankCard ? `onclick="App.selectCourse('${course.id}')"` : `onclick="App.togglePin(event, '${course.id}', '${term ? term.id : 'bank'}')"`;
 
-        let tagDots = '';
-        if (course.tags && course.tags.length > 0) {
-            tagDots = `<div class="card-tag-dots">`;
-            course.tags.forEach(tId => {
-                const tag = State.tags.find(t => t.id === tId);
-                if (tag) {
-                    const iconClass = tag.icon || 'ph-circle';
-                    tagDots += `<i class="ph-fill ${iconClass} text-[0.8rem] drop-shadow-sm" style="color: ${tag.color}" title="${tag.name}"></i>`;
-                }
-            });
-            tagDots += `</div>`;
-        }
-
-        let actionButtons = '';
-        if (!State.isPreviewMode) {
-            actionButtons = isBankCard 
-                ? `<button class="btn-icon" onclick="event.stopPropagation(); UI.editCourse('${course.id}')" title="Edit Course"><i class="ph ph-pencil-simple text-icon leading-none"></i></button>
-                   <button class="btn-icon-danger" onclick="event.stopPropagation(); App.deleteCourse('${course.id}')" title="Delete Course"><i class="ph ph-trash text-icon leading-none"></i></button>`
-                : `<button class="btn-icon-danger" onclick="App.hideDeadEnds(event, '${course.id}', '${term.id}')" title="Hide Dead Ends for this sequence"><i class="ph ph-magic-wand text-icon leading-none"></i></button>
-                   <button class="btn-icon" onclick="App.toggleHidden(event, '${course.id}', '${term.id}')" title="Toggle active status"><i class="ph ${eyeIcon} text-icon leading-none"></i></button>
-                   <button class="btn-icon-danger" onclick="App.removeCard(event, '${course.id}', '${term.id}')" title="Remove from term"><i class="ph ph-x text-icon leading-none"></i></button>`;
-        }
-        
-
         return `
             <div style="${cStyleStr}" class="course-card ${compactClass} ${hiddenClass} ${selectedClass} card-node flex flex-col justify-between group/card relative overflow-hidden" 
                  data-cid="${course.id}" data-tid="${term ? term.id : 'bank'}" onmouseenter="UI.handleMouseOver('${course.id}', '${term ? term.id : 'bank'}')" onmouseleave="UI.handleMouseOut()" ${onClickHandler}>
                  <div class="flex flex-col w-full">
-                    
                     <span class="font-bold text-course-id leading-tight truncate pr-8 ${singletonStyles}" title="${course.id}">${course.id} <span class="font-normal text-course-credits text-text-main not-italic opacity-80">(${course.credits})</span></span>
-                    
                     <div class="text-course-title truncate leading-tight mt-0.5" title="${course.title}">${course.title}</div>
                  </div>
                  ${course.joint && course.joint.length ? `<div class="text-course-joint mt-auto font-medium opacity-80 truncate leading-tight pb-0.5 italic" title="Joint: ${course.joint.join(', ')}">Joint: ${course.joint.join(', ')}</div>` : `<div class="mt-auto"></div>`}
-                 ${tagDots}
-                 ${!State.isPreviewMode ? `<div class="card-action-menu">${actionButtons}</div>` : ''}
+                 ${this._buildCardTagDots(course.tags)}
+                 ${this._buildCardActionMenu(course, term, isBankCard, isHidden)}
             </div>`;
     },
 

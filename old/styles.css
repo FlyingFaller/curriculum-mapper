@@ -241,3 +241,45 @@ thead th.sticky-col {
     /* Right border, Top border, and the outer drop shadow for overlapping */
     box-shadow: inset -1px 0 0 0 var(--border-color), inset 0 2px 0 0 var(--border-color), 2px 0 4px -2px rgba(0, 0, 0, 0.05) !important;
 }
+
+/* =========================================
+   PDF EXPORT MODE (Injected via html2pdf clone)
+   ========================================= */
+.pdf-export-mode header,
+.pdf-export-mode #info-footer,
+.pdf-export-mode .card-action-menu,
+.pdf-export-mode .btn-icon,
+.pdf-export-mode .btn-icon-danger,
+.pdf-export-mode button,
+.pdf-export-mode #export-modal {
+    display: none !important;
+}
+
+.pdf-export-mode, 
+.pdf-export-mode main, 
+.pdf-export-mode .table-container {
+    width: max-content !important;
+    height: auto !important;
+    max-width: none !important;
+    max-height: none !important;
+    overflow: visible !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    background-color: var(--bg-surface) !important;
+}
+
+.pdf-export-mode .sticky-col {
+    position: static !important;
+    box-shadow: none !important;
+    border-right: 1px solid var(--border-color) !important;
+}
+
+.pdf-export-mode.pdf-ignore-hidden .hidden-instance { 
+    display: none !important; 
+}
+
+.pdf-export-mode.pdf-compact-mode .compact-table th:first-child,
+.pdf-export-mode.pdf-compact-mode .compact-table .course-bank-cell,
+.pdf-export-mode.pdf-compact-mode .compact-table .sticky-bottom-row td:first-child {
+    display: none !important;
+}

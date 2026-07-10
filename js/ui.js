@@ -12,94 +12,37 @@ export const UI = {
         defaultTagColor: '#3b82f6',
         colorisSwatches: [ '#ffffff', '#fca5a5', '#fdba74', '#fde047', '#86efac', '#93c5fd', '#d8b4fe', '#f9a8d4' ]
     },
-    
-    // compactMode: false,
-    // showBreakdown: false,
-    // selectedCourseId: null,
-    // pinnedNode: null,
 
     elements: {}, 
 
     initDOM() {
-        this.elements = {
-            // Layout & Controls
-            tableHead: document.getElementById('table-head'),
-            tableBody: document.getElementById('table-body'),
-            scheduleTable: document.getElementById('schedule-table'),
-            compactToggle: document.getElementById('compact-toggle'),
-            breakdownToggle: document.getElementById('breakdown-toggle'),
-            // Footer
-            descTitle: document.getElementById('desc-title'),
-            descTags: document.getElementById('desc-tags'),
-            descContent: document.getElementById('desc-content'),
-            infoFooter: document.getElementById('info-footer'),
-            footerResizer: document.getElementById('footer-resizer'),
-            // Term Modal
-            termModal: document.getElementById('term-modal'),
-            termName: document.getElementById('term-name'),
-            termColor: document.getElementById('term-color'),
-            // Course Modal
-            courseModal: document.getElementById('course-modal'),
-            courseModalTitle: document.getElementById('course-modal-title'),
-            courseForm: document.getElementById('course-form'),
-            courseId: document.getElementById('course-id'),
-            courseTitle: document.getElementById('course-title'),
-            courseCredits: document.getElementById('course-credits'),
-            courseColor: document.getElementById('course-color'),
-            coursePrereqs: document.getElementById('course-prereqs'),
-            courseCoreqs: document.getElementById('course-coreqs'),
-            courseJoint: document.getElementById('course-joint'),
-            courseDesc: document.getElementById('course-desc'),
-            courseTagsContainer: document.getElementById('course-tags-container'),
-            // Tag Manager & Editor Modals
-            tagManagerModal: document.getElementById('tag-manager-modal'),
-            globalTagsList: document.getElementById('global-tags-list'),
-            tagEditorModal: document.getElementById('tag-editor-modal'),
-            tagEditorTitle: document.getElementById('tag-editor-title'),
-            tagEditId: document.getElementById('tag-edit-id'),
-            tagEditName: document.getElementById('tag-edit-name'),
-            tagEditColor: document.getElementById('tag-edit-color'),
-            tagEditIconVal: document.getElementById('tag-edit-icon-val'),
-            tagEditIcons: document.getElementById('tag-edit-icons'),
-            // Tag Constraints
-            tagEditEnableConstraints: document.getElementById('tag-edit-enable-constraints'),
-            tagConstraintsContainer: document.getElementById('tag-constraints-container'),
-            tagEditReqType: document.getElementById('tag-edit-req-type'),
-            tagEditMetric: document.getElementById('tag-edit-metric'),
-            tagEditMin: document.getElementById('tag-edit-min'),
-            tagEditMax: document.getElementById('tag-edit-max'),
-            tagEditWeight: document.getElementById('tag-edit-weight'),
-            tagWeightContainer: document.getElementById('tag-weight-container'),
-            tagWeightVal: document.getElementById('tag-weight-val'),
-            // Whitelist Modal
-            whitelistModal: document.getElementById('whitelist-modal'),
-            whitelistInput: document.getElementById('whitelist-input'),
-            // Confirm Modal
-            confirmModal: document.getElementById('confirm-modal'),
-            confirmTitle: document.getElementById('confirm-title'),
-            confirmMessage: document.getElementById('confirm-message'),
-            confirmBtn: document.getElementById('confirm-btn'),
-            // Export Modal
-            exportModal: document.getElementById('export-modal'),
-            exportFormat: document.getElementById('export-format'),
-            exportOptionsContainer: document.getElementById('export-options-container'),
-            exportIgnoreHidden: document.getElementById('export-ignore-hidden'),
-            exportIgnoreBank: document.getElementById('export-ignore-bank'),
-            exportIncludeMeta: document.getElementById('export-include-meta'),
-            exportMetaLabel: document.getElementById('export-meta-label'),
-            // Schedule Generator
-            generatorSidebar: document.getElementById('generator-sidebar'),
-            genMaxTerms: document.getElementById('gen-max-terms'),
-            genMaxResults: document.getElementById('gen-max-results'),
-            genMaxTime: document.getElementById('gen-max-time'),
-            savedSchedulesList: document.getElementById('saved-schedules-list'),
-            generatorResultsList: document.getElementById('generator-results-list'),
-            // Header & Sidebar Schedule Info
-            activeScheduleName: document.getElementById('active-schedule-name'),
-            previewScheduleName: document.getElementById('preview-schedule-name'),
-            previewScheduleText: document.getElementById('preview-schedule-text'),
-            sidebarActiveName: document.getElementById('sidebar-active-name'),
-        };
+        const ids = [
+            'table-head', 'table-body', 'schedule-table', 'compact-toggle', 'breakdown-toggle',
+            'desc-title', 'desc-tags', 'desc-content', 'info-footer', 'footer-resizer',
+            'term-modal', 'term-name', 'term-color', 
+            'course-modal', 'course-modal-title', 'course-form', 'course-id', 'course-title', 
+            'course-credits', 'course-color', 'course-prereqs', 'course-coreqs', 'course-joint', 
+            'course-desc', 'course-tags-container',
+            'tag-manager-modal', 'global-tags-list', 'tag-editor-modal', 'tag-editor-title',
+            'tag-edit-id', 'tag-edit-name', 'tag-edit-color', 'tag-edit-icon-val', 'tag-edit-icons',
+            'tag-edit-enable-constraints', 'tag-constraints-container', 'tag-edit-req-type',
+            'tag-edit-metric', 'tag-edit-min', 'tag-edit-max', 'tag-edit-weight', 
+            'tag-weight-container', 'tag-weight-val',
+            'whitelist-modal', 'whitelist-input',
+            'confirm-modal', 'confirm-title', 'confirm-message', 'confirm-btn',
+            'export-modal', 'export-format', 'export-options-container', 'export-ignore-hidden', 
+            'export-ignore-bank', 'export-include-meta', 'export-meta-label',
+            'generator-sidebar', 'gen-max-terms', 'gen-max-results', 'gen-max-time', 
+            'saved-schedules-list', 'generator-results-list',
+            'active-schedule-name', 'preview-schedule-name', 'preview-schedule-text', 
+            'sidebar-active-name'
+        ];
+
+        this.elements = ids.reduce((acc, id) => {
+            const camelKey = id.replace(/-([a-z])/g, (g) => g[1].toUpperCase());
+            acc[camelKey] = document.getElementById(id);
+            return acc;
+        }, {});
     },
 
     utils: {
@@ -193,17 +136,14 @@ export const UI = {
         }
 
         // Toggle Preview Header
-        if (State.isPreviewMode) {
-            const displayedSched = State.schedules[State.displayedScheduleId];
-            this.elements.activeScheduleName.classList.add('hidden');
-            if (this.elements.previewScheduleName) {
-                this.elements.previewScheduleName.classList.remove('hidden');
+        const isPreview = State.isPreviewMode;
+        this.elements.activeScheduleName.classList.toggle('hidden', isPreview);
+        
+        if (this.elements.previewScheduleName) {
+            this.elements.previewScheduleName.classList.toggle('hidden', !isPreview);
+            if (isPreview) {
+                const displayedSched = State.schedules[State.displayedScheduleId];
                 this.elements.previewScheduleText.innerText = displayedSched.name;
-            }
-        } else {
-            this.elements.activeScheduleName.classList.remove('hidden');
-            if (this.elements.previewScheduleName) {
-                this.elements.previewScheduleName.classList.add('hidden');
             }
         }
         
@@ -231,7 +171,7 @@ export const UI = {
         if (!this.elements.savedSchedulesList) return;
 
         const schedIds = Object.keys(State.schedules).filter(id => id !== State.activeScheduleId);
-        const anyPinned = !!State.pinnedScheduleId; // Check if ANY schedule is currently pinned
+        const anyPinned = !!State.pinnedScheduleId; 
         
         if (schedIds.length === 0) {
             this.elements.savedSchedulesList.innerHTML = `
@@ -250,15 +190,12 @@ export const UI = {
             let textClass = '';
 
             if (isPinned) {
-                // Pinned State: Full blue highlight with gold border
                 activeClass = 'selected-card bg-[var(--color-hover)] shadow-md';
                 textClass = 'text-main';
             } else if (anyPinned) {
-                // Gray Hover State: Something else is pinned, preview is locked
                 activeClass = 'border-border bg-surface hover:bg-surface-hover hover:border-border-border';
                 textClass = 'text-text-main group-hover:text-text-main';
             } else {
-                // Blue Hover State: Nothing pinned, ready to preview
                 activeClass = 'border-border bg-surface hover:bg-[var(--color-hover)] hover:border-[var(--color-hover)]';
                 textClass = 'text-text-main group-hover:text-main';
             }
@@ -318,7 +255,6 @@ export const UI = {
         this.updateFooter(cId);
         const classesToRemove = ['hl-hover', 'hl-imm-pre', 'hl-sec-pre', 'hl-post', 'hl-coreq', 'hl-err-temp', 'hl-err-miss'];
         
-        // *Note: Using querySelectorAll here specifically because course cards are dynamic HTML strings rendered via innerHTML, not static layout elements.
         document.querySelectorAll('.card-node').forEach(node => node.classList.remove(...classesToRemove));
 
         const { highlights, status } = HoverEngine.analyze(cId, tId);
@@ -406,43 +342,28 @@ export const UI = {
     },
 
     openTagEditor(tagId = null) {
+        const tag = tagId ? State.tags.find(t => t.id === tagId) : {};
+        const constraints = tag.constraints || {};
+        
         this.elements.tagEditId.value = tagId || '';
         this.elements.tagEditorTitle.innerText = tagId ? 'Edit Tag' : 'Create Tag';
+        this.elements.tagEditName.value = tag.name || '';
+        this.utils.setColoris(this.elements.tagEditColor, tag.color || this.config.defaultTagColor);
         
-        let selectedIcon = 'ph-circle';
-        if (tagId) {
-            const tag = State.tags.find(t => t.id === tagId);
-            this.elements.tagEditName.value = tag.name;
-            this.utils.setColoris(this.elements.tagEditColor, tag.color);
-            if (tag.icon) selectedIcon = tag.icon;
-            
-            // Populate constraint fields
-            const hasConstraints = !!tag.constraints;
-            this.elements.tagEditEnableConstraints.checked = hasConstraints;
-            if (hasConstraints) {
-                this.elements.tagEditReqType.value = tag.constraints.type || 'mandatory';
-                this.elements.tagEditMetric.value = tag.constraints.metric || 'courses';
-                this.elements.tagEditMin.value = tag.constraints.min !== undefined ? tag.constraints.min : 1;
-                this.elements.tagEditMax.value = tag.constraints.max !== undefined ? tag.constraints.max : '';
-                this.elements.tagEditWeight.value = tag.constraints.weight || 5;
-                this.elements.tagWeightVal.innerText = tag.constraints.weight || 5;
-            }
-        } else {
-            this.elements.tagEditName.value = '';
-            this.utils.setColoris(this.elements.tagEditColor, this.config.defaultTagColor); 
-            this.elements.tagEditEnableConstraints.checked = false;
-            
-            // Reset defaults
-            this.elements.tagEditReqType.value = 'mandatory';
-            this.elements.tagEditMetric.value = 'courses';
-            this.elements.tagEditMin.value = 1;
-            this.elements.tagEditMax.value = '';
-            this.elements.tagEditWeight.value = 5;
-            this.elements.tagWeightVal.innerText = 5;
-        }
+        const hasConstraints = !!tag.constraints;
+        this.elements.tagEditEnableConstraints.checked = hasConstraints;
+        
+        this.elements.tagEditReqType.value = constraints.type || 'mandatory';
+        this.elements.tagEditMetric.value = constraints.metric || 'courses';
+        this.elements.tagEditMin.value = constraints.min !== undefined ? constraints.min : 1;
+        this.elements.tagEditMax.value = constraints.max !== undefined ? constraints.max : '';
+        
+        const weight = constraints.weight || 5;
+        this.elements.tagEditWeight.value = weight;
+        this.elements.tagWeightVal.innerText = weight;
         
         this.toggleTagConstraints();
-        this.renderIconPicker(selectedIcon);
+        this.renderIconPicker(tag.icon || 'ph-circle');
         this.modals.open(this.elements.tagEditorModal, this.elements.tagEditName);
     },
 
@@ -450,16 +371,8 @@ export const UI = {
         const isEnabled = this.elements.tagEditEnableConstraints.checked;
         const reqType = this.elements.tagEditReqType.value;
         
-        if (isEnabled) {
-            this.elements.tagConstraintsContainer.classList.remove('hidden');
-            if (reqType === 'optional') {
-                this.elements.tagWeightContainer.classList.remove('hidden');
-            } else {
-                this.elements.tagWeightContainer.classList.add('hidden');
-            }
-        } else {
-            this.elements.tagConstraintsContainer.classList.add('hidden');
-        }
+        this.elements.tagConstraintsContainer.classList.toggle('hidden', !isEnabled);
+        this.elements.tagWeightContainer.classList.toggle('hidden', !isEnabled || reqType !== 'optional');
     },
 
     closeTagEditor() {
@@ -474,8 +387,6 @@ export const UI = {
         this.elements.courseTagsContainer.innerHTML = Components.buildCourseTagsFormHTML(selectedTagIds);
     },
 
-    
-
     renderIconPicker(selectedIcon = null) {
         const currentColor = this.elements.tagEditColor.value || this.config.defaultTagColor;
         if (!selectedIcon) selectedIcon = this.elements.tagEditIconVal.value || 'ph-circle';
@@ -489,27 +400,17 @@ export const UI = {
     },
 
     openExportModal() {
-    // Reset to default state
-    this.elements.exportFormat.value = 'json';
-    this.toggleExportOptions();
-    this.modals.open(this.elements.exportModal, this.elements.exportFormat);
+        this.elements.exportFormat.value = 'json';
+        this.toggleExportOptions();
+        this.modals.open(this.elements.exportModal, this.elements.exportFormat);
     },
 
     toggleExportOptions() {
         const format = this.elements.exportFormat.value;
+        const isJson = format === 'json';
         
-        if (format === 'json') {
-            this.elements.exportOptionsContainer.classList.add('hidden');
-        } else {
-            this.elements.exportOptionsContainer.classList.remove('hidden');
-            
-            // Hide Metadata checkbox if the format starts with 'pdf'
-            if (format.startsWith('pdf')) {
-                this.elements.exportMetaLabel.classList.add('hidden');
-            } else {
-                this.elements.exportMetaLabel.classList.remove('hidden');
-            }
-        }
+        this.elements.exportOptionsContainer.classList.toggle('hidden', isJson);
+        this.elements.exportMetaLabel.classList.toggle('hidden', isJson || format.startsWith('pdf'));
     },
 
     openWhitelistModal() {
@@ -533,7 +434,6 @@ export const UI = {
         this.elements.confirmMessage.innerText = msg;
         this.modals.open(this.elements.confirmModal);
         
-        // Re-assign the click handler to clear the modal and execute callback
         this.elements.confirmBtn.onclick = () => {
             this.closeConfirm();
             onConfirmCallback();

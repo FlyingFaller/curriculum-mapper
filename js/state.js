@@ -29,6 +29,23 @@ export const State = {
     get isPreviewMode() {
         return this.displayedScheduleId !== this.activeScheduleId;
     },
+
+    // Derived memo-getter to prevent O(N) looping through entire courses list for column rendering
+    get termAssignments() {
+        const assignments = {};
+        this.terms.forEach(t => assignments[t.id] = []);
+        const grid = this.displayedGrid;
+        
+        for (const cId in grid) {
+            for (const tId in grid[cId]) {
+                if (grid[cId][tId] && grid[cId][tId].active && !grid[cId][tId].hidden) {
+                    if (!assignments[tId]) assignments[tId] = [];
+                    assignments[tId].push(cId);
+                }
+            }
+        }
+        return assignments;
+    },
     
     // Ephemeral UI State
     compactMode: false,
@@ -65,6 +82,49 @@ export const State = {
         this.showBreakdown = false;
         this.selectedCourseId = null;
         this.pinnedNode = null;
+    },
+
+    updateCourseId(oldId, newId) {
+        if (!this.courses[oldId]) return;
+        
+        // 1. Update course object key
+        this.courses[newId] = this.courses[oldId];
+        this.courses[newId].id = newId;
+        delete this.courses[oldId];
+        
+        // 2. Update schedules
+        Object.values(this.schedules).forEach(sched => {
+            if (sched.grid[oldId]) {
+                sched.grid[newId] = sched.grid[oldId];
+                delete sched.grid[oldId];
+            }
+        });
+        
+        // 3. Update prereqs, coreqs, joint for other courses
+        Object.values(this.courses).forEach(c => {
+            c.prereqs = c.prereqs.map(req => req === oldId ? newId : req);
+            c.coreqs = c.coreqs.map(req => req === oldId ? newId : req);
+            c.joint = c.joint.map(req => req === oldId ? newId : req);
+        });
+        
+        // 4. Update whitelist references
+        this.whitelist = this.whitelist.map(req => req === oldId ? newId : req);
+    },
+
+    deleteCourse(courseId) {
+        delete this.courses[courseId];
+        
+        Object.values(this.schedules).forEach(sched => {
+            delete sched.grid[courseId];
+        });
+        
+        Object.values(this.courses).forEach(c => {
+            c.prereqs = c.prereqs.filter(req => req !== courseId);
+            c.coreqs = c.coreqs.filter(req => req !== courseId);
+            c.joint = c.joint.filter(req => req !== courseId);
+        });
+        
+        this.whitelist = this.whitelist.filter(req => req !== courseId);
     },
 
     hydrate(parsed) {
