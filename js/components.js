@@ -38,7 +38,6 @@ export const Components = {
             });
         });
 
-        // Calculate term totals utilizing cached assignments instead of entire course list
         State.terms.forEach(term => {
             const activeCourseIds = assignments[term.id] || [];
             activeCourseIds.forEach(cId => {
@@ -70,9 +69,9 @@ export const Components = {
         if (State.showBreakdown) {
             bankBreakdownHTML = `<div class="flex flex-col gap-1 w-full">`;
             breakdowns.forEach(tb => {
-                const iconHTML = tb.id === 'untagged' ? `<i class="ph ${tb.icon} text-xs" style="color: ${tb.color}"></i>` : `<i class="ph-fill ${tb.icon} text-xs drop-shadow-sm" style="color: ${tb.color}"></i>`;
+                const iconHTML = tb.id === 'untagged' ? `<i class="ph ${tb.icon} text-caption" style="color: ${tb.color}"></i>` : `<i class="ph-fill ${tb.icon} text-caption drop-shadow-sm" style="color: ${tb.color}"></i>`;
                 bankBreakdownHTML += `
-                    <div class="flex justify-start items-center gap-2 text-xs h-5 font-normal opacity-80">
+                    <div class="flex justify-start items-center gap-2 text-caption h-5 font-normal opacity-80">
                         <span class="flex items-center gap-1.5 truncate text-text-main">${iconHTML} ${tb.name}</span>
                         <span class="shrink-0">${tb.bankTotal} cr</span>
                     </div>`;
@@ -82,13 +81,12 @@ export const Components = {
 
         let html = `<tr class="bg-surface">
         <th class="cell-size sticky-col px-3 py-2 z-30 border-b border-border bg-surface-alt align-top">
-            <div class="font-bold text-header" title="${State.compactMode ? 'Course Bank' : 'Courses'}">${State.compactMode ? 'Course Bank' : 'Courses'}</div>
-            <div class="text-xs font-normal opacity-80 mt-0.5">${totalBankCredits} hours</div>
+            <div class="font-bold text-heading" title="${State.compactMode ? 'Course Bank' : 'Courses'}">${State.compactMode ? 'Course Bank' : 'Courses'}</div>
+            <div class="text-caption font-normal opacity-80 mt-0.5">${totalBankCredits} hours</div>
             ${bankBreakdownHTML}
         </th>`;
         
         State.terms.forEach(term => {
-            // Replaced O(N) course array filtering with O(1) assignments access
             const activeCourseIds = State.termAssignments[term.id] || [];
             let termCredits = activeCourseIds.reduce((sum, cId) => sum + (State.courses[cId]?.credits || 0), 0);
 
@@ -97,7 +95,7 @@ export const Components = {
                 termBreakdownHTML = `<div class="flex flex-col gap-1 w-full">`;
                 breakdowns.forEach(tb => {
                     const displayTotal = tb.termTotals[term.id] > 0 ? `${tb.termTotals[term.id]} cr` : `<span class="opacity-40">0 cr</span>`;
-                    termBreakdownHTML += `<div class="flex justify-start items-center text-xs h-5 font-normal opacity-80">${displayTotal}</div>`;
+                    termBreakdownHTML += `<div class="flex justify-start items-center text-caption h-5 font-normal opacity-80">${displayTotal}</div>`;
                 });
                 termBreakdownHTML += `</div>`;
             }
@@ -106,16 +104,16 @@ export const Components = {
             if (!State.isPreviewMode) {
                 termActionMenu = `
                 <div class="card-action-menu">
-                    <button onclick="UI.editTerm('${term.id}')" class="btn-icon"><i class="ph ph-pencil-simple text-icon leading-none"></i></button>
-                    <button onclick="App.deleteTerm('${term.id}')" class="btn-icon-danger"><i class="ph ph-trash text-icon leading-none"></i></button>
+                    <button onclick="UI.editTerm('${term.id}')" class="btn-icon"><i class="ph ph-pencil-simple text-base leading-none"></i></button>
+                    <button onclick="App.deleteTerm('${term.id}')" class="btn-icon-danger"><i class="ph ph-trash text-base leading-none"></i></button>
                 </div>`;
             }
             
             let styleStr = term.color ? `background-color: ${term.color}; color: ${UI.utils.getContrastColor(term.color)};` : `background-color: var(--bg-surface);`;
             
             html += `<th style="${styleStr}" class="cell-size px-3 py-2 font-bold border-r border-border group text-left border-b align-top">
-                <div class="truncate w-full pr-8 text-header" title="${term.name}">${term.name}</div>
-                <div class="text-xs font-normal opacity-80 mt-0.5">${termCredits} hours</div>
+                <div class="truncate w-full pr-8 text-heading" title="${term.name}">${term.name}</div>
+                <div class="text-caption font-normal opacity-80 mt-0.5">${termCredits} hours</div>
                 ${termActionMenu}
                 ${termBreakdownHTML}
             </th>`;
@@ -132,11 +130,12 @@ export const Components = {
         html += `</div></td>`;
         
         State.terms.forEach(term => {
-            html += `<td class="cell-size p-2 align-top border-r border-b border-border bg-surface">
+            html += `<td class="cell-size p-2 align-top border-r border-b border-border bg-surface relative z-0">
                 <div class="flex flex-col gap-2 w-full">`;
             let visibleHTML = '', hiddenHTML = '';
             sortedCourses.forEach(course => {
                 if (course.id === State.selectedCourseId) return; 
+
                 const cellData = State.displayedGrid[course.id]?.[term.id];
                 if (cellData?.active) {
                     if (cellData.hidden) hiddenHTML += this.generateCourseCardHTML(course, term, true, false);
@@ -156,12 +155,12 @@ export const Components = {
                 <td class="cell-size sticky-col align-top border-r border-border p-2">
                     <div style="${activeCourseStyle}" class="course-card compact-mode-card selected-card flex flex-col justify-between group/card relative overflow-hidden m-0" onclick="App.selectCourse(null)">
                         <div class="flex flex-col w-full">
-                            <span class="font-bold text-course-id leading-tight truncate pr-8" title="${activeCourse.id}">${activeCourse.id}</span>
-                            <div class="text-course-title opacity-90 truncate leading-tight mt-0.5" title="${activeCourse.title}">${activeCourse.title}</div>
+                            <span class="font-bold text-heading leading-tight truncate pr-8" title="${activeCourse.id}">${activeCourse.id}</span>
+                            <div class="text-base opacity-90 truncate leading-tight mt-0.5" title="${activeCourse.title}">${activeCourse.title}</div>
                         </div>
                         <div class="card-action-menu">
                             <button class="btn-icon-danger" onclick="event.stopPropagation(); App.selectCourse(null)" title="Close Editor">
-                                <i class="ph ph-x text-icon leading-none"></i>
+                                <i class="ph ph-x text-base leading-none"></i>
                             </button>
                         </div>
                     </div>
@@ -197,23 +196,23 @@ export const Components = {
             if (!State.isPreviewMode) {
                 courseActionMenu = `
                 <div class="card-action-menu">
-                    <button onclick="UI.editCourse('${course.id}')" class="btn-icon"><i class="ph ph-pencil-simple text-icon leading-none"></i></button>
-                    <button onclick="App.deleteCourse('${course.id}')" class="btn-icon-danger"><i class="ph ph-trash text-icon leading-none"></i></button>
+                    <button onclick="UI.editCourse('${course.id}')" class="btn-icon"><i class="ph ph-pencil-simple text-base leading-none"></i></button>
+                    <button onclick="App.deleteCourse('${course.id}')" class="btn-icon-danger"><i class="ph ph-trash text-base leading-none"></i></button>
                 </div>`;
             }
 
             html += `
                 <td style="${cStyleStr}" class="cell-size course-cell-height sticky-col px-3 py-2 align-top group border-b border-border">
                     <div class="flex justify-between items-start relative">
-                        <span class="font-bold text-course-id leading-tight truncate pr-8" title="${course.id}">${course.id} <span class="font-normal text-course-credits opacity-80">(${course.credits})</span></span>
+                        <span class="font-bold text-heading leading-tight truncate pr-8" title="${course.id}">${course.id} <span class="font-normal text-meta opacity-80">(${course.credits})</span></span>
                         ${courseActionMenu}
                     </div>
-                    <div class="text-course-title opacity-90 truncate leading-tight mt-0.5" title="${course.title}">${course.title}</div>
+                    <div class="text-base opacity-90 truncate leading-tight mt-0.5" title="${course.title}">${course.title}</div>
                 </td>`;
 
             State.terms.forEach(term => {
                 const cellData = State.displayedGrid[course.id]?.[term.id];
-                html += `<td class="cell-size course-cell-height p-0 align-top border-r border-b border-border bg-surface relative" onclick="App.toggleCell('${course.id}', '${term.id}')">`;
+                html += `<td class="cell-size course-cell-height p-0 align-top border-r border-b border-border bg-surface relative z-0" onclick="App.toggleCell('${course.id}', '${term.id}')">`;
                 if (cellData?.active) html += this.generateCourseCardHTML(course, term, cellData.hidden, false);
                 html += `</td>`;
             });
@@ -230,7 +229,7 @@ export const Components = {
             const tag = State.tags.find(t => t.id === tId);
             if (tag) {
                 const iconClass = tag.icon || 'ph-circle';
-                html += `<i class="ph-fill ${iconClass} text-[0.8rem] drop-shadow-sm" style="color: ${tag.color}" title="${tag.name}"></i>`;
+                html += `<i class="ph-fill ${iconClass} text-sm drop-shadow-sm" style="color: ${tag.color}" title="${tag.name}"></i>`;
             }
         });
         html += `</div>`;
@@ -244,13 +243,13 @@ export const Components = {
         
         if (isBankCard) {
             buttons = `
-                <button class="btn-icon" onclick="event.stopPropagation(); UI.editCourse('${course.id}')" title="Edit Course"><i class="ph ph-pencil-simple text-icon leading-none"></i></button>
-                <button class="btn-icon-danger" onclick="event.stopPropagation(); App.deleteCourse('${course.id}')" title="Delete Course"><i class="ph ph-trash text-icon leading-none"></i></button>`;
+                <button class="btn-icon" onclick="event.stopPropagation(); UI.editCourse('${course.id}')" title="Edit Course"><i class="ph ph-pencil-simple text-base leading-none"></i></button>
+                <button class="btn-icon-danger" onclick="event.stopPropagation(); App.deleteCourse('${course.id}')" title="Delete Course"><i class="ph ph-trash text-base leading-none"></i></button>`;
         } else {
             buttons = `
-                <button class="btn-icon-danger" onclick="App.hideDeadEnds(event, '${course.id}', '${term.id}')" title="Hide Dead Ends for this sequence"><i class="ph ph-magic-wand text-icon leading-none"></i></button>
-                <button class="btn-icon" onclick="App.toggleHidden(event, '${course.id}', '${term.id}')" title="Toggle active status"><i class="ph ${eyeIcon} text-icon leading-none"></i></button>
-                <button class="btn-icon-danger" onclick="App.removeCard(event, '${course.id}', '${term.id}')" title="Remove from term"><i class="ph ph-x text-icon leading-none"></i></button>`;
+                <button class="btn-icon-danger" onclick="App.hideDeadEnds(event, '${course.id}', '${term.id}')" title="Hide Dead Ends for this sequence"><i class="ph ph-magic-wand text-base leading-none"></i></button>
+                <button class="btn-icon" onclick="App.toggleHidden(event, '${course.id}', '${term.id}')" title="Toggle active status"><i class="ph ${eyeIcon} text-base leading-none"></i></button>
+                <button class="btn-icon-danger" onclick="App.removeCard(event, '${course.id}', '${term.id}')" title="Remove from term"><i class="ph ph-x text-base leading-none"></i></button>`;
         }
         
         return `<div class="card-action-menu">${buttons}</div>`;
@@ -276,10 +275,10 @@ export const Components = {
             <div style="${cStyleStr}" class="course-card ${compactClass} ${hiddenClass} ${selectedClass} card-node flex flex-col justify-between group/card relative overflow-hidden" 
                  data-cid="${course.id}" data-tid="${term ? term.id : 'bank'}" onmouseenter="UI.handleMouseOver('${course.id}', '${term ? term.id : 'bank'}')" onmouseleave="UI.handleMouseOut()" ${onClickHandler}>
                  <div class="flex flex-col w-full">
-                    <span class="font-bold text-course-id leading-tight truncate pr-8 ${singletonStyles}" title="${course.id}">${course.id} <span class="font-normal text-course-credits text-text-main not-italic opacity-80">(${course.credits})</span></span>
-                    <div class="text-course-title truncate leading-tight mt-0.5" title="${course.title}">${course.title}</div>
+                    <span class="font-bold text-heading leading-tight truncate pr-8 ${singletonStyles}" title="${course.id}">${course.id} <span class="font-normal text-meta text-text-main not-italic opacity-80">(${course.credits})</span></span>
+                    <div class="text-base truncate leading-tight mt-0.5" title="${course.title}">${course.title}</div>
                  </div>
-                 ${course.joint && course.joint.length ? `<div class="text-course-joint mt-auto font-medium opacity-80 truncate leading-tight pb-0.5 italic" title="Joint: ${course.joint.join(', ')}">Joint: ${course.joint.join(', ')}</div>` : `<div class="mt-auto"></div>`}
+                 ${course.joint && course.joint.length ? `<div class="text-meta mt-auto font-medium opacity-80 truncate leading-tight pb-0.5 italic" title="Joint: ${course.joint.join(', ')}">Joint: ${course.joint.join(', ')}</div>` : `<div class="mt-auto"></div>`}
                  ${this._buildCardTagDots(course.tags)}
                  ${this._buildCardActionMenu(course, term, isBankCard, isHidden)}
             </div>`;
@@ -298,15 +297,15 @@ export const Components = {
                     <span class="text-sm font-medium">${tag.name}</span>
                 </div>
                 <div class="flex gap-1">
-                    <button onclick="UI.openTagEditor('${tag.id}')" class="btn-icon"><i class="ph ph-pencil-simple text-icon"></i></button>
-                    <button onclick="App.deleteTag('${tag.id}')" class="btn-icon-danger"><i class="ph ph-trash text-icon"></i></button>
+                    <button onclick="UI.openTagEditor('${tag.id}')" class="btn-icon"><i class="ph ph-pencil-simple text-base"></i></button>
+                    <button onclick="App.deleteTag('${tag.id}')" class="btn-icon-danger"><i class="ph ph-trash text-base"></i></button>
                 </div>
             </div>`;
         }).join('');
     },
 
     buildCourseTagsFormHTML(selectedTagIds = []) {
-        if (State.tags.length === 0) return `<span class="text-xs text-text-muted italic">No tags available. Create one!</span>`;
+        if (State.tags.length === 0) return `<span class="text-caption text-text-muted italic">No tags available. Create one!</span>`;
         return State.tags.map(tag => {
             const isChecked = selectedTagIds.includes(tag.id) ? 'checked' : '';
             const iconClass = tag.icon || 'ph-circle';
@@ -314,7 +313,7 @@ export const Components = {
             <label class="flex items-center gap-1.5 px-2 py-1 bg-surface border border-border rounded cursor-pointer hover:bg-surface-hover">
                 <input type="checkbox" value="${tag.id}" class="course-tag-checkbox accent-accent" ${isChecked}>
                 <i class="ph-fill ${iconClass} text-sm drop-shadow-sm" style="color: ${tag.color}"></i>
-                <span class="text-xs font-medium">${tag.name}</span>
+                <span class="text-caption font-medium">${tag.name}</span>
             </label>`;
         }).join('');
     },

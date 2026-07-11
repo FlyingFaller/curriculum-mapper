@@ -24,16 +24,20 @@
                         accent: 'var(--accent-main)',
                         'accent-hover': 'var(--accent-hover)',
                         'accent-bg': 'var(--accent-bg)',
-                        'accent-text': 'var(--accent-text)'
+                        'accent-text': 'var(--accent-text)',
+                        danger: 'var(--danger-main)',
+                        'danger-hover': 'var(--danger-hover)',
+                        'danger-bg': 'var(--danger-bg)',
+                        'danger-border': 'var(--danger-border)'
                     },
                     fontSize: {
-                        'legend': 'var(--fs-legend)',
-                        'header': 'var(--fs-header)',
-                        'course-id': 'var(--fs-course-id)',
-                        'course-credits': 'var(--fs-course-credits)',
-                        'course-title': 'var(--fs-course-title)',
-                        'course-joint': 'var(--fs-course-joint)',
-                        'icon': 'var(--fs-icon)'
+                        'micro': '0.65rem',
+                        'caption': '0.75rem', 
+                        'meta': '0.85rem',
+                        'base': '1rem',
+                        'heading': '1.1rem',
+                        'title-sm': '1.125rem',
+                        'title-lg': '1.5rem'
                     }
                 }
             }
@@ -48,7 +52,6 @@
     
     <link rel="stylesheet" href="styles.css">
 </head>
-
 <body class="bg-canvas flex flex-col h-screen overflow-hidden text-sm text-text-main transition-colors duration-200">
 
     <header class="bg-surface border-b border-border px-6 py-4 flex items-center shrink-0 shadow-sm z-40 transition-colors duration-200">
@@ -61,15 +64,15 @@
                     <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"></path>
                 </svg>
             </a>
-            <h1 class="text-2xl font-bold tracking-tight text-accent drop-shadow-sm">Curriculum Map Builder</h1>
+            <h1 class="text-title-lg font-bold tracking-tight text-accent drop-shadow-sm">Curriculum Map Builder</h1>
         </div>
         
         <div class="flex-1 flex justify-center px-6">
-            <input type="text" id="active-schedule-name" class="bg-surface border border-border hover:border-border-focus focus:border-border-focus rounded-md px-4 py-1.5 text-lg font-medium text-left text-text-main outline-none transition shadow-sm w-full max-w-sm" oninput="App.updateScheduleName(this.value)" placeholder="Schedule Name">
+            <input type="text" id="active-schedule-name" class="bg-surface border border-border hover:border-border-focus focus:border-border-focus rounded-md px-4 py-1.5 text-title-sm font-medium text-left text-text-main outline-none transition shadow-sm w-full max-w-sm" oninput="App.updateScheduleName(this.value)" placeholder="Schedule Name">
             
             <div id="preview-schedule-name" class="hidden flex items-center gap-3">
-                <span class="px-2 py-0.5 bg-accent text-white text-[0.9rem] tracking-wider rounded shadow-sm">Previewing</span>
-                <span id="preview-schedule-text" class="text-lg text-text-main"></span>
+                <span class="px-2 py-0.5 bg-accent text-white text-meta tracking-wider rounded shadow-sm">Previewing</span>
+                <span id="preview-schedule-text" class="text-title-sm text-text-main"></span>
             </div>
         </div>
 
@@ -82,7 +85,7 @@
             <button onclick="UI.openExportModal()" class="px-2 py-2 text-text-muted hover:text-accent transition" title="Export Curriculum Map">
                 <i class="ph ph-download-simple text-xl"></i>
             </button>
-            <button onclick="App.resetMap()" class="px-2 py-2 text-text-muted hover:text-red-500 transition" title="Reset Schedule">
+            <button onclick="App.resetMap()" class="px-2 py-2 text-text-muted hover:text-danger-main transition" title="Reset Schedule">
                 <i class="ph ph-arrow-counter-clockwise text-xl"></i>
             </button>
 
@@ -109,7 +112,7 @@
             <button onclick="App.showAllHidden()" class="px-2 py-2 text-text-muted hover:text-text-main transition" title="Show All Hidden Cards">
                 <i class="ph ph-eye text-xl"></i>
             </button>
-            <button onclick="App.hideErrors()" class="px-2 py-2 text-text-muted hover:text-red-500 transition" title="Hide Erroneous Cards">
+            <button onclick="App.hideErrors()" class="px-2 py-2 text-text-muted hover:text-danger-main transition" title="Hide Erroneous Cards">
                 <i class="ph ph-magic-wand text-xl"></i>
             </button>
 
@@ -134,13 +137,13 @@
 
     <main class="flex-1 p-6 overflow-hidden flex flex-col">
         
-        <div class="flex w-full justify-between gap-3 text-legend font-medium mb-4 shrink-0">
-            <div class="flex-1 px-3 py-1.5 bg-[var(--color-sec-pre)] border border-border text-gray-900 shadow-sm text-center truncate rounded-md" title="Course prerequisite chain">Course prerequisite chain</div>
-            <div class="flex-1 px-3 py-1.5 bg-[var(--color-imm-pre)] border border-border text-white shadow-sm text-center truncate rounded-md" title="Immediate prerequisite">Immediate prerequisite</div>
-            <div class="flex-1 px-3 py-1.5 bg-[var(--color-coreq)] border border-border text-white shadow-sm text-center truncate rounded-md" title="Concurrent/credit required">Concurrent/credit required</div>
-            <div class="flex-1 px-3 py-1.5 bg-[var(--color-post)] border border-border text-gray-900 shadow-sm text-center truncate rounded-md" title="Postrequisite sequence">Postrequisite sequence</div>
-            <div class="flex-1 px-3 py-1.5 bg-[var(--color-err-temp)] border border-red-500 text-red-900 dark:text-white shadow-sm text-center truncate rounded-md" title="Timing Error">Timing Error</div>
-            <div class="flex-1 px-3 py-1.5 bg-[var(--color-err-miss)] border border-red-800 text-white shadow-sm text-center truncate rounded-md" title="Missing Error">Missing Error</div>
+        <div class="flex w-full justify-between gap-3 text-heading font-medium mb-4 shrink-0 transition-colors">
+            <div class="legend-item flex-1 px-3 py-1.5 bg-[var(--color-sec-pre)] border border-[var(--color-sec-pre)] shadow-sm text-center truncate rounded-md" title="Course prerequisite chain">Course prerequisite chain</div>
+            <div class="legend-item flex-1 px-3 py-1.5 bg-[var(--color-imm-pre)] border border-[var(--color-imm-pre)] shadow-sm text-center truncate rounded-md" title="Immediate prerequisite">Immediate prerequisite</div>
+            <div class="legend-item flex-1 px-3 py-1.5 bg-[var(--color-coreq)] border border-[var(--color-coreq)] shadow-sm text-center truncate rounded-md" title="Concurrent/credit required">Concurrent/credit required</div>
+            <div class="legend-item flex-1 px-3 py-1.5 bg-[var(--color-post)] border border-[var(--color-post)] shadow-sm text-center truncate rounded-md" title="Postrequisite sequence">Postrequisite sequence</div>
+            <div class="legend-item flex-1 px-3 py-1.5 bg-[var(--color-err-temp)] border border-[var(--color-err-temp)] shadow-sm text-center truncate rounded-md" title="Timing Error">Timing Error</div>
+            <div class="legend-item flex-1 px-3 py-1.5 bg-[var(--color-err-miss)] border border-[var(--color-err-miss)] shadow-sm text-center truncate rounded-md" title="Missing Error">Missing Error</div>
         </div>
 
         <div class="bg-surface border border-border rounded-xl shadow-sm flex-1 table-container relative" id="table-wrapper">
@@ -156,7 +159,7 @@
     <footer id="info-footer" style="height: 192px;" class="relative bg-surface border-t border-border p-5 shrink-0 flex flex-col shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] z-40 transition-colors">
         <div id="footer-resizer" class="absolute top-0 left-0 w-full h-1.5 cursor-row-resize bg-transparent hover:bg-accent-hover transition-colors z-50"></div>
         
-        <h2 id="desc-title" class="text-lg font-bold text-text-main mt-1">Hover over a course to see its description.</h2>
+        <h2 id="desc-title" class="text-title-sm font-bold text-text-main mt-1">Hover over a course to see its description.</h2>
         <div class="flex gap-2 text-sm flex-wrap mt-2 mb-2" id="desc-tags"></div>
         <p id="desc-content" class="text-text-muted overflow-y-auto pr-2 text-base leading-relaxed"></p>
     </footer>
@@ -164,52 +167,52 @@
     <div id="course-modal" class="fixed inset-0 bg-black/50 backdrop-blur-sm hidden flex items-center justify-center z-50">
         <div class="bg-surface border border-border rounded-xl shadow-2xl w-full max-w-lg overflow-hidden flex flex-col max-h-[90vh]">
             <div class="px-6 py-4 border-b border-border flex justify-between items-center bg-surface-alt">
-                <h3 class="font-bold text-lg text-text-main" id="course-modal-title">Add/Edit Course</h3>
+                <h3 class="font-bold text-title-sm text-text-main" id="course-modal-title">Add/Edit Course</h3>
                 <button onclick="UI.modals.closeAll()" class="text-text-muted hover:text-text-main"><i class="ph ph-x text-xl"></i></button>
             </div>
             <div class="p-6 overflow-y-auto flex-1">
                 <form id="course-form" class="space-y-4">
                     <div class="flex gap-4">
                         <div class="w-1/3">
-                            <label class="block text-xs font-semibold text-text-muted mb-1">Course ID *</label>
-                            <input type="text" id="course-id" required placeholder="e.g. AA583" class="modal-input uppercase">
+                            <label class="block text-caption font-semibold text-text-muted mb-1">Course ID *</label>
+                            <input type="text" id="course-id" required placeholder="e.g. AA583" class="modal-input uppercase text-base">
                         </div>
                         <div class="w-2/3">
-                            <label class="block text-xs font-semibold text-text-muted mb-1">Title</label>
-                            <input type="text" id="course-title" placeholder="e.g. Adv Aerodynamics" class="modal-input">
+                            <label class="block text-caption font-semibold text-text-muted mb-1">Title</label>
+                            <input type="text" id="course-title" placeholder="e.g. Adv Aerodynamics" class="modal-input text-base">
                         </div>
                     </div>
                     <div class="flex gap-4">
                         <div class="w-1/2">
-                            <label class="block text-xs font-semibold text-text-muted mb-1">Credit Hours</label>
-                            <input type="number" id="course-credits" value="3" min="0" class="modal-input">
+                            <label class="block text-caption font-semibold text-text-muted mb-1">Credit Hours</label>
+                            <input type="number" id="course-credits" value="3" min="0" class="modal-input text-base">
                         </div>
                         <div class="w-1/2">
-                            <label class="block text-xs font-semibold text-text-muted mb-2">Header Color</label>
+                            <label class="block text-caption font-semibold text-text-muted mb-2">Header Color</label>
                             <div class="flex items-center gap-3">
-                                <input type="text" id="course-color" data-coloris value="#ffffff" class="w-24 bg-canvas border border-border text-text-main rounded px-2 py-1.5 text-xs focus:border-border-focus outline-none cursor-pointer">
-                                <button type="button" onclick="UI.utils.setColoris('#course-color', '#ffffff')" class="text-xs px-2 py-1.5 bg-surface border border-border rounded shadow-sm hover:bg-surface-hover text-text-muted hover:text-text-main transition-colors flex items-center gap-1">
+                                <input type="text" id="course-color" data-coloris value="" class="w-24 bg-canvas border border-border text-text-main rounded px-2 py-1.5 text-caption focus:border-border-focus outline-none cursor-pointer">
+                                <button type="button" onclick="UI.utils.setColoris('#course-color', '')" class="text-caption px-2 py-1.5 bg-surface border border-border rounded shadow-sm hover:bg-surface-hover text-text-muted hover:text-text-main transition-colors flex items-center gap-1">
                                     <i class="ph ph-eraser text-sm"></i> Clear
                                 </button>
                             </div>
                         </div>
                     </div>
                     <div>
-                        <label class="block text-xs font-semibold text-text-muted mb-1">Immediate Prerequisites</label>
-                        <input type="text" id="course-prereqs" placeholder="e.g. MATH221, PHYS211" class="modal-input uppercase">
+                        <label class="block text-caption font-semibold text-text-muted mb-1">Immediate Prerequisites</label>
+                        <input type="text" id="course-prereqs" placeholder="e.g. MATH221, PHYS211" class="modal-input uppercase text-base">
                     </div>
                     <div>
-                        <label class="block text-xs font-semibold text-text-muted mb-1">Concurrent Requirements</label>
-                        <input type="text" id="course-coreqs" placeholder="e.g. MATH231" class="modal-input uppercase">
+                        <label class="block text-caption font-semibold text-text-muted mb-1">Concurrent Requirements</label>
+                        <input type="text" id="course-coreqs" placeholder="e.g. MATH231" class="modal-input uppercase text-base">
                     </div>
                     <div>
-                        <label class="block text-xs font-semibold text-text-muted mb-1">Jointly Offered</label>
-                        <input type="text" id="course-joint" placeholder="e.g. ME583" class="modal-input uppercase">
+                        <label class="block text-caption font-semibold text-text-muted mb-1">Jointly Offered</label>
+                        <input type="text" id="course-joint" placeholder="e.g. ME583" class="modal-input uppercase text-base">
                     </div>
                     <div>
                         <div class="flex justify-between items-end mb-1">
-                            <label class="block text-xs font-semibold text-text-muted">Tags</label>
-                            <button type="button" onclick="UI.openTagEditor()" class="text-xs text-accent hover:text-accent-hover font-medium flex items-center gap-1">
+                            <label class="block text-caption font-semibold text-text-muted">Tags</label>
+                            <button type="button" onclick="UI.openTagEditor()" class="text-caption text-accent hover:text-accent-hover font-medium flex items-center gap-1">
                                 <i class="ph ph-plus"></i> Create Tag
                             </button>
                         </div>
@@ -217,14 +220,14 @@
                         </div>
                     </div>
                     <div>
-                        <label class="block text-xs font-semibold text-text-muted mb-1">Description</label>
-                        <textarea id="course-desc" rows="3" class="modal-input resize-y min-h-[80px]"></textarea>
+                        <label class="block text-caption font-semibold text-text-muted mb-1">Description</label>
+                        <textarea id="course-desc" rows="3" class="modal-input resize-y min-h-[80px] text-base"></textarea>
                     </div>
                 </form>
             </div>
             <div class="px-6 py-4 border-t border-border bg-surface-alt flex justify-end gap-3">
-                <button onclick="UI.modals.closeAll()" class="btn-secondary">Cancel</button>
-                <button onclick="App.saveCourse()" class="btn-primary shadow-sm">Save Course</button>
+                <button onclick="UI.modals.closeAll()" class="px-4 py-2 border border-border bg-surface text-text-main rounded hover:bg-surface-hover font-medium">Cancel</button>
+                <button onclick="App.saveCourse()" class="px-4 py-2 bg-accent text-white rounded hover:bg-accent-hover font-medium shadow-sm">Save Course</button>
             </div>
         </div>
     </div>
@@ -232,27 +235,27 @@
     <div id="term-modal" class="fixed inset-0 bg-black/50 backdrop-blur-sm hidden flex items-center justify-center z-50">
         <div class="bg-surface border border-border rounded-xl shadow-2xl w-full max-w-sm overflow-hidden flex flex-col">
             <div class="px-6 py-4 border-b border-border flex justify-between items-center bg-surface-alt">
-                <h3 class="font-bold text-lg text-text-main">Add/Edit Term</h3>
+                <h3 class="font-bold text-title-sm text-text-main">Add/Edit Term</h3>
                 <button onclick="UI.modals.closeAll()" class="text-text-muted hover:text-text-main"><i class="ph ph-x text-xl"></i></button>
             </div>
             <div class="p-6 space-y-5">
                 <div>
-                    <label class="block text-xs font-semibold text-text-muted mb-1">Term Name</label>
-                    <input type="text" id="term-name" data-id="" placeholder="e.g. WIN 27" class="modal-input" onkeydown="if(event.key==='Enter') App.saveTerm()">
+                    <label class="block text-caption font-semibold text-text-muted mb-1">Term Name</label>
+                    <input type="text" id="term-name" data-id="" placeholder="e.g. WIN 27" class="modal-input text-base" onkeydown="if(event.key==='Enter') App.saveTerm()">
                 </div>
                 <div>
-                    <label class="block text-xs font-semibold text-text-muted mb-2">Header Background Color</label>
+                    <label class="block text-caption font-semibold text-text-muted mb-2">Header Background Color</label>
                     <div class="flex items-center gap-3">
-                        <input type="text" id="term-color" data-coloris value="#ffffff" class="w-24 bg-canvas border border-border text-text-main rounded px-2 py-1.5 text-xs focus:border-border-focus outline-none cursor-pointer">
-                        <button type="button" onclick="UI.utils.setColoris('#term-color', '#ffffff')" class="text-xs px-2 py-1.5 bg-surface border border-border rounded shadow-sm hover:bg-surface-hover text-text-muted hover:text-text-main transition-colors flex items-center gap-1">
+                        <input type="text" id="term-color" data-coloris value="" class="w-24 bg-canvas border border-border text-text-main rounded px-2 py-1.5 text-caption focus:border-border-focus outline-none cursor-pointer">
+                        <button type="button" onclick="UI.utils.setColoris('#term-color', '')" class="text-caption px-2 py-1.5 bg-surface border border-border rounded shadow-sm hover:bg-surface-hover text-text-muted hover:text-text-main transition-colors flex items-center gap-1">
                             <i class="ph ph-eraser text-sm"></i> Clear
                         </button>
                     </div>
                 </div>
             </div>
             <div class="px-6 py-4 border-t border-border bg-surface-alt flex justify-end gap-3">
-                <button onclick="UI.modals.closeAll()" class="btn-secondary">Cancel</button>
-                <button onclick="App.saveTerm()" class="btn-primary shadow-sm">Save Term</button>
+                <button onclick="UI.modals.closeAll()" class="px-4 py-2 border border-border bg-surface text-text-main rounded hover:bg-surface-hover font-medium">Cancel</button>
+                <button onclick="App.saveTerm()" class="px-4 py-2 bg-accent text-white rounded hover:bg-accent-hover font-medium shadow-sm">Save Term</button>
             </div>
         </div>
     </div>
@@ -260,13 +263,12 @@
     <div id="export-modal" class="fixed inset-0 bg-black/50 backdrop-blur-sm hidden flex items-center justify-center z-50">
         <div class="bg-surface border border-border rounded-xl shadow-2xl w-full max-w-sm overflow-hidden flex flex-col">
             <div class="px-6 py-4 border-b border-border flex justify-between items-center bg-surface-alt">
-                <h3 class="font-bold text-lg text-text-main">Export Curriculum Map</h3>
+                <h3 class="font-bold text-title-sm text-text-main">Export Curriculum Map</h3>
                 <button onclick="UI.modals.closeAll()" class="text-text-muted hover:text-text-main"><i class="ph ph-x text-xl"></i></button>
             </div>
             <div class="p-6 space-y-5">
-                
                 <div>
-                    <label class="block text-xs font-semibold text-text-muted mb-2">Export Format</label>
+                    <label class="block text-caption font-semibold text-text-muted mb-2">Export Format</label>
                     <select id="export-format" class="modal-input cursor-pointer" onchange="UI.toggleExportOptions()">
                         <option value="json">JSON (Full Backup / Importable)</option>
                         <option value="pdf-print">PDF (High-Quality Native Print)</option>
@@ -275,30 +277,25 @@
                         <option value="xlsx">Excel (.xlsx Workbook)</option>
                     </select>
                 </div>
-
                 <div id="export-options-container" class="space-y-3 hidden">
-                    <label class="block text-xs font-semibold text-text-muted mb-1">Configuration</label>
-                    
+                    <label class="block text-caption font-semibold text-text-muted mb-1">Configuration</label>
                     <label class="flex items-center gap-2 cursor-pointer text-sm text-text-main hover:text-accent transition-colors">
                         <input type="checkbox" id="export-ignore-hidden" class="accent-accent w-4 h-4" checked>
                         <span>Ignore hidden course instances</span>
                     </label>
-                    
                     <label class="flex items-center gap-2 cursor-pointer text-sm text-text-main hover:text-accent transition-colors">
                         <input type="checkbox" id="export-ignore-bank" class="accent-accent w-4 h-4">
                         <span>Ignore unscheduled Course Bank</span>
                     </label>
-                    
                     <label id="export-meta-label" class="flex items-center gap-2 cursor-pointer text-sm text-text-main hover:text-accent transition-colors">
                         <input type="checkbox" id="export-include-meta" class="accent-accent w-4 h-4" checked>
                         <span>Include metadata (Desc, Tags, Reqs)</span>
                     </label>
                 </div>
-
             </div>
             <div class="px-6 py-4 border-t border-border bg-surface-alt flex justify-end gap-3">
-                <button onclick="UI.modals.closeAll()" class="btn-secondary">Cancel</button>
-                <button onclick="Storage.executeExport()" class="btn-primary shadow-sm flex items-center gap-2">
+                <button onclick="UI.modals.closeAll()" class="px-4 py-2 border border-border bg-surface text-text-main rounded hover:bg-surface-hover font-medium">Cancel</button>
+                <button onclick="Storage.executeExport()" class="px-4 py-2 bg-accent text-white rounded hover:bg-accent-hover font-medium shadow-sm flex items-center gap-2">
                     <i class="ph ph-download-simple"></i> Download
                 </button>
             </div>
@@ -308,12 +305,12 @@
     <div id="confirm-modal" class="fixed inset-0 bg-black/50 backdrop-blur-sm hidden flex items-center justify-center z-[60]">
         <div class="bg-surface border border-border rounded-xl shadow-2xl w-full max-w-sm overflow-hidden flex flex-col">
             <div class="p-6">
-                <h3 class="font-bold text-lg text-text-main mb-2" id="confirm-title">Confirm</h3>
+                <h3 class="font-bold text-title-sm text-text-main mb-2" id="confirm-title">Confirm</h3>
                 <p class="text-text-muted text-sm" id="confirm-message">Are you sure?</p>
             </div>
             <div class="px-6 py-4 border-t border-border bg-surface-alt flex justify-end gap-3">
-                <button onclick="UI.closeConfirm()" class="btn-secondary">Cancel</button>
-                <button id="confirm-btn" class="btn-primary bg-red-600 border-red-600 hover:bg-red-700 shadow-sm">Confirm</button>
+                <button onclick="UI.closeConfirm()" class="px-4 py-2 border border-border bg-surface text-text-main rounded hover:bg-surface-hover font-medium">Cancel</button>
+                <button id="confirm-btn" class="px-4 py-2 bg-danger-main text-white rounded hover:bg-danger-hover font-medium shadow-sm">Confirm</button>
             </div>
         </div>
     </div>
@@ -321,17 +318,17 @@
     <div id="whitelist-modal" class="fixed inset-0 bg-black/50 backdrop-blur-sm hidden flex items-center justify-center z-50">
         <div class="bg-surface border border-border rounded-xl shadow-2xl w-full max-w-md overflow-hidden flex flex-col max-h-[90vh]">
             <div class="px-6 py-4 border-b border-border flex justify-between items-center bg-surface-alt">
-                <h3 class="font-bold text-lg text-text-main">Global Whitelist</h3>
+                <h3 class="font-bold text-title-sm text-text-main">Global Whitelist</h3>
                 <button onclick="UI.modals.closeAll()" class="text-text-muted hover:text-text-main"><i class="ph ph-x text-xl"></i></button>
             </div>
             <div class="p-6 overflow-y-auto">
-                <label class="block text-xs font-semibold text-text-main mb-1">Ignored Prerequisites & Corequisites</label>
-                <p class="text-xs text-text-muted mb-3 leading-relaxed">Enter a comma-separated list of course IDs. The hover engine will completely ignore these courses when checking for missing or timing errors.</p>
-                <textarea id="whitelist-input" rows="4" placeholder="e.g. MATH124, PHYS121" class="modal-input uppercase"></textarea>
+                <label class="block text-caption font-semibold text-text-main mb-1">Ignored Prerequisites & Corequisites</label>
+                <p class="text-caption text-text-muted mb-3 leading-relaxed">Enter a comma-separated list of course IDs. The hover engine will completely ignore these courses when checking for missing or timing errors.</p>
+                <textarea id="whitelist-input" rows="4" placeholder="e.g. MATH124, PHYS121" class="modal-input uppercase text-base"></textarea>
             </div>
             <div class="px-6 py-4 border-t border-border bg-surface-alt flex justify-end gap-3">
-                <button onclick="UI.modals.closeAll()" class="btn-secondary">Cancel</button>
-                <button onclick="App.saveWhitelist()" class="btn-primary shadow-sm">Save Whitelist</button>
+                <button onclick="UI.modals.closeAll()" class="px-4 py-2 border border-border bg-surface text-text-main rounded hover:bg-surface-hover font-medium">Cancel</button>
+                <button onclick="App.saveWhitelist()" class="px-4 py-2 bg-accent text-white rounded hover:bg-accent-hover font-medium shadow-sm">Save Whitelist</button>
             </div>
         </div>
     </div>
@@ -339,7 +336,7 @@
     <div id="tag-manager-modal" class="fixed inset-0 bg-black/50 backdrop-blur-sm hidden flex items-center justify-center z-50">
         <div class="bg-surface border border-border rounded-xl shadow-2xl w-full max-w-sm overflow-hidden flex flex-col max-h-[90vh]">
             <div class="px-6 py-4 border-b border-border flex justify-between items-center bg-surface-alt">
-                <h3 class="font-bold text-lg text-text-main">Global Tags</h3>
+                <h3 class="font-bold text-title-sm text-text-main">Global Tags</h3>
                 <button onclick="UI.modals.closeAll()" class="text-text-muted hover:text-text-main"><i class="ph ph-x text-xl"></i></button>
             </div>
             <div class="p-6 flex flex-col">
@@ -355,26 +352,26 @@
     <div id="tag-editor-modal" class="fixed inset-0 bg-black/40 hidden flex items-center justify-center z-[60]">
         <div class="bg-surface border border-border rounded-xl shadow-2xl w-full max-w-sm overflow-hidden flex flex-col">
             <div class="px-5 py-3 border-b border-border flex justify-between items-center bg-surface-alt">
-                <h3 id="tag-editor-title" class="font-bold text-md text-text-main">Create Tag</h3>
+                <h3 id="tag-editor-title" class="font-bold text-base text-text-main">Create Tag</h3>
             </div>
             <div class="p-5 space-y-4 max-h-[75vh] overflow-y-auto">
                 <input type="hidden" id="tag-edit-id">
                 <input type="hidden" id="tag-edit-icon-val">
                 
                 <div>
-                    <label class="block text-xs font-semibold text-text-muted mb-1">Tag Name</label>
-                    <input type="text" id="tag-edit-name" class="modal-input">
+                    <label class="block text-caption font-semibold text-text-muted mb-1">Tag Name</label>
+                    <input type="text" id="tag-edit-name" class="modal-input text-base">
                 </div>
                 
                 <div class="flex gap-3">
                     <div class="flex-1">
-                        <label class="block text-xs font-semibold text-text-muted mb-1">Color</label>
-                        <input type="text" id="tag-edit-color" data-coloris value="#3b82f6" oninput="UI.renderIconPicker()" class="w-full bg-canvas border border-border text-text-main rounded px-3 py-2 text-xs focus:border-border-focus outline-none cursor-pointer">
+                        <label class="block text-caption font-semibold text-text-muted mb-1">Color</label>
+                        <input type="text" id="tag-edit-color" data-coloris value="#3b82f6" oninput="UI.renderIconPicker()" class="w-full bg-canvas border border-border text-text-main rounded px-3 py-2 text-caption focus:border-border-focus outline-none cursor-pointer">
                     </div>
                 </div>
                 
                 <div>
-                    <label class="block text-xs font-semibold text-text-muted mb-1">Icon</label>
+                    <label class="block text-caption font-semibold text-text-muted mb-1">Icon</label>
                     <div id="tag-edit-icons" class="grid grid-cols-8 gap-1 bg-canvas p-1.5 border border-border rounded max-h-32 overflow-y-auto">
                     </div>
                 </div>
@@ -389,48 +386,45 @@
                 <div id="tag-constraints-container" class="space-y-3 hidden bg-surface-alt p-3 rounded border border-border">
                     <div class="flex gap-3">
                         <div class="w-1/2">
-                            <label class="block text-xs font-semibold text-text-muted mb-1">Requirement Type</label>
-                            <select id="tag-edit-req-type" class="modal-input cursor-pointer" onchange="UI.toggleTagConstraints()">
+                            <label class="block text-caption font-semibold text-text-muted mb-1">Requirement Type</label>
+                            <select id="tag-edit-req-type" class="modal-input cursor-pointer text-base" onchange="UI.toggleTagConstraints()">
                                 <option value="mandatory">Mandatory</option>
                                 <option value="optional">Optional/Desired</option>
                             </select>
                         </div>
                         <div class="w-1/2">
-                            <label class="block text-xs font-semibold text-text-muted mb-1">Constraint Metric</label>
-                            <select id="tag-edit-metric" class="modal-input cursor-pointer">
+                            <label class="block text-caption font-semibold text-text-muted mb-1">Constraint Metric</label>
+                            <select id="tag-edit-metric" class="modal-input cursor-pointer text-base">
                                 <option value="courses">By Course Count</option>
                                 <option value="credits">By Credit Count</option>
                             </select>
                         </div>
                     </div>
-
                     <div class="flex gap-3">
                         <div class="w-1/2">
-                            <label class="block text-xs font-semibold text-text-muted mb-1">Min Required</label>
-                            <input type="number" id="tag-edit-min" value="1" min="0" class="modal-input">
+                            <label class="block text-caption font-semibold text-text-muted mb-1">Min Required</label>
+                            <input type="number" id="tag-edit-min" value="1" min="0" class="modal-input text-base">
                         </div>
                         <div class="w-1/2">
-                            <label class="block text-xs font-semibold text-text-muted mb-1">Max Allowed (Opt.)</label>
-                            <input type="number" id="tag-edit-max" placeholder="∞" min="0" class="modal-input">
+                            <label class="block text-caption font-semibold text-text-muted mb-1">Max Allowed (Opt.)</label>
+                            <input type="number" id="tag-edit-max" placeholder=" " min="0" class="modal-input text-base">
                         </div>
                     </div>
-
                     <div id="tag-weight-container" class="hidden">
-                        <label class="block text-xs font-semibold text-text-muted mb-1">Desirability Weight (<span id="tag-weight-val">5</span>)</label>
+                        <label class="block text-caption font-semibold text-text-muted mb-1">Desirability Weight (<span id="tag-weight-val">5</span>)</label>
                         <input type="range" id="tag-edit-weight" min="1" max="10" value="5" class="w-full accent-accent cursor-pointer" oninput="document.getElementById('tag-weight-val').innerText = this.value">
                     </div>
                 </div>
 
             </div>
             <div class="px-5 py-3 border-t border-border flex justify-end gap-2 bg-surface-alt shrink-0">
-                <button onclick="UI.closeTagEditor()" class="btn-secondary">Cancel</button>
-                <button onclick="App.saveTag()" class="btn-primary shadow-sm">Save</button>
+                <button onclick="UI.closeTagEditor()" class="px-4 py-2 border border-border bg-surface text-text-main rounded hover:bg-surface-hover font-medium">Cancel</button>
+                <button onclick="App.saveTag()" class="px-4 py-2 bg-accent text-white rounded hover:bg-accent-hover font-medium shadow-sm">Save</button>
             </div>
         </div>
     </div>
 
-    <div id="generator-sidebar" class="fixed top-0 left-0 h-full w-72 bg-surface border-r border-border shadow-[4px_0_24px_rgba(0,0,0,0.08)] transform -translate-x-full transition-transform duration-300 z-[55] flex flex-col">
-    
+    <div id="generator-sidebar" class="fixed top-0 left-0 h-full w-60 bg-surface border-r border-border shadow-[4px_0_24px_rgba(0,0,0,0.08)] transform -translate-x-full transition-transform duration-300 z-[55] flex flex-col">
         <div class="px-4 py-3 border-b border-border flex justify-between items-center bg-surface-alt shrink-0">
             <div class="flex items-center gap-2 text-accent">
                 <h3 class="font-bold text-base text-text-main">Schedule Generator</h3>
@@ -439,59 +433,51 @@
                 <i class="ph ph-x text-lg"></i>
             </button>
         </div>
-
         <div class="flex-1 overflow-y-auto p-4 flex flex-col gap-4">
-            
             <div class="shrink-0 flex flex-col gap-2">
                 <div class="grid grid-cols-3 gap-2">
                     <div>
-                        <label class="block text-[0.65rem] font-bold text-text-muted mb-0.5 uppercase tracking-wider" title="Max Terms">Max Terms</label>
-                        <input type="number" id="gen-max-terms" value="6" min="1" class="w-full bg-canvas border border-border text-text-main rounded px-2 py-1 text-xs focus:border-border-focus outline-none">
+                        <label class="block text-micro font-bold text-text-muted mb-0.5 uppercase tracking-wider" title="Max Terms">Max Terms</label>
+                        <input type="number" id="gen-max-terms" value="6" min="1" class="w-full bg-canvas border border-border text-text-main rounded px-2 py-1 text-caption focus:border-border-focus outline-none">
                     </div>
                     <div>
-                        <label class="block text-[0.65rem] font-bold text-text-muted mb-0.5 uppercase tracking-wider" title="Max Results">Max Results</label>
-                        <input type="number" id="gen-max-results" placeholder="∞" min="1" class="w-full bg-canvas border border-border text-text-main rounded px-2 py-1 text-xs focus:border-border-focus outline-none">
+                        <label class="block text-micro font-bold text-text-muted mb-0.5 uppercase tracking-wider" title="Max Results">Max Results</label>
+                        <input type="number" id="gen-max-results" placeholder="∞" min="1" class="w-full bg-canvas border border-border text-text-main rounded px-2 py-1 text-caption focus:border-border-focus outline-none">
                     </div>
                     <div>
-                        <label class="block text-[0.65rem] font-bold text-text-muted mb-0.5 uppercase tracking-wider" title="Max Compute Time (sec)">Max Time (s)</label>
-                        <input type="number" id="gen-max-time" value="5" min="1" class="w-full bg-canvas border border-border text-text-main rounded px-2 py-1 text-xs focus:border-border-focus outline-none">
+                        <label class="block text-micro font-bold text-text-muted mb-0.5 uppercase tracking-wider" title="Max Compute Time (sec)">Max Time (s)</label>
+                        <input type="number" id="gen-max-time" value="5" min="1" class="w-full bg-canvas border border-border text-text-main rounded px-2 py-1 text-caption focus:border-border-focus outline-none">
                     </div>
                 </div>
-                <button class="w-full bg-accent hover:bg-accent-hover text-white rounded py-1.5 text-xs font-bold transition-colors shadow-sm flex items-center justify-center gap-1.5">
+                <button class="w-full bg-accent hover:bg-accent-hover text-white rounded py-1.5 text-caption font-bold transition-colors shadow-sm flex items-center justify-center gap-1.5">
                     <i class="ph-bold ph-play"></i> Generate
                 </button>
             </div>
-
             <div class="h-px bg-border w-full shrink-0"></div>
-
             <div class="space-y-2 shrink-0 flex flex-col pt-1">
-                <h4 class="text-[0.65rem] font-bold text-text-muted uppercase tracking-wider">Active Schedule</h4>
+                <h4 class="text-micro font-bold text-text-muted uppercase tracking-wider">Active Schedule</h4>
                 <div class="bg-surface border border-border rounded-md shadow-sm p-2 flex items-center">
                     <span id="sidebar-active-name" class="text-sm text-text-main truncate text-left w-full"></span>
                 </div>
             </div>
-
             <div class="space-y-2 shrink-0 flex flex-col">
                 <div class="flex justify-between items-center">
-                    <h4 class="text-[0.65rem] font-bold text-text-muted uppercase tracking-wider">Saved Schedules</h4>
+                    <h4 class="text-micro font-bold text-text-muted uppercase tracking-wider">Saved Schedules</h4>
                     <button onclick="App.snapshotSchedule()" class="text-text-muted hover:text-accent transition-colors" title="Snapshot Current Schedule">
                         <i class="ph ph-camera text-sm"></i>
                     </button>
                 </div>
                 <div id="saved-schedules-list" class="flex flex-col gap-2"></div>
             </div>
-
             <div class="h-px bg-border w-full shrink-0"></div>
-
             <div class="space-y-2 shrink-0 flex flex-col pb-2">
-                <h4 class="text-[0.65rem] font-bold text-text-muted uppercase tracking-wider">Optimal Results</h4>
+                <h4 class="text-micro font-bold text-text-muted uppercase tracking-wider">Optimal Results</h4>
                 <div id="generator-results-list" class="flex flex-col gap-2">
-                    <div class="text-[0.7rem] text-text-muted italic p-3 text-center border border-dashed border-border rounded bg-canvas">
+                    <div class="text-caption text-text-muted italic p-3 text-center border border-dashed border-border rounded bg-canvas">
                         No results.
                     </div>
                 </div>
             </div>
-
         </div>
     </div>
 

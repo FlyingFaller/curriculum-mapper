@@ -7,8 +7,8 @@ export const UI = {
     // CONFIG, STATE & DOM CACHE
     // ==========================================
     config: {
-        defaultTermColor: '#ffffff',
-        defaultCourseColor: '#ffffff',
+        defaultTermColor: '',
+        defaultCourseColor: '',
         defaultTagColor: '#3b82f6',
         colorisSwatches: [ '#ffffff', '#fca5a5', '#fdba74', '#fde047', '#86efac', '#93c5fd', '#d8b4fe', '#f9a8d4' ]
     },
@@ -43,23 +43,49 @@ export const UI = {
             acc[camelKey] = document.getElementById(id);
             return acc;
         }, {});
+
+        // Dynamically auto-contrast legend text on initial load
+        this.updateLegendContrast();
+
+        // Listen for Theme changes on the <html> tag to re-evaluate contrast
+        const themeObserver = new MutationObserver(() => this.updateLegendContrast());
+        themeObserver.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
     },
 
     utils: {
         sanitizeId: (str) => str.toUpperCase().replace(/\s+/g, '').replace(/[^A-Z0-9_-]/g, ''),
         parseList: (str) => str.split(',').map(s => s.trim().toUpperCase().replace(/\s+/g, '')).filter(s => s.length > 0),
-        getContrastColor(hexColor) {
-            if (!hexColor) return '';
-            let r = parseInt(hexColor.substr(1, 2), 16);
-            let g = parseInt(hexColor.substr(3, 2), 16);
-            let b = parseInt(hexColor.substr(5, 2), 16);
+        getContrastColor(colorStr) {
+            if (!colorStr) return '#000000';
+            let r, g, b;
+            
+            if (colorStr.startsWith('rgb')) {
+                const match = colorStr.match(/\d+/g);
+                if (!match || match.length < 3) return '#000000';
+                r = parseInt(match[0]);
+                g = parseInt(match[1]);
+                b = parseInt(match[2]);
+            } else {
+                let hex = colorStr.replace('#', '');
+                if (hex.length === 3) hex = hex.split('').map(c => c + c).join('');
+                r = parseInt(hex.substr(0, 2), 16);
+                g = parseInt(hex.substr(2, 2), 16);
+                b = parseInt(hex.substr(4, 2), 16);
+            }
+            
             let yiq = ((r * 299) + (g * 587) + (b * 114)) / 1000;
+            // Returning exact hexes here overrides inline theme inversions.
             return (yiq >= 128) ? '#000000' : '#ffffff';
         },
-        setColoris(el, color) {
+        setColoris(selectorOrEl, color) {
+            // Check if we were passed a string selector (like '#course-color') or an element directly
+            const el = typeof selectorOrEl === 'string' ? document.querySelector(selectorOrEl) : selectorOrEl;
+            
             if (el) {
                 el.value = color;
                 el.dispatchEvent(new Event('input', { bubbles: true }));
+                // Dispatch 'change' to ensure the Coloris visual swatch UI updates correctly
+                el.dispatchEvent(new Event('change', { bubbles: true }));
             }
         }
     },
@@ -81,7 +107,7 @@ export const UI = {
     },
 
     // ==========================================
-    // INITIALIZATION
+    // INITIALIZATION & RESIZERS
     // ==========================================
     initColoris() {
         if(window.Coloris) {
@@ -126,6 +152,13 @@ export const UI = {
     // ==========================================
     // CORE RENDERING 
     // ==========================================
+    updateLegendContrast() {
+        document.querySelectorAll('.legend-item').forEach(el => {
+            const computedBg = getComputedStyle(el).backgroundColor;
+            el.style.color = this.utils.getContrastColor(computedBg);
+        });
+    },
+
     renderTable() {
         const activeSched = State.schedules[State.activeScheduleId];
         if (activeSched) {
@@ -135,7 +168,6 @@ export const UI = {
             }
         }
 
-        // Toggle Preview Header
         const isPreview = State.isPreviewMode;
         this.elements.activeScheduleName.classList.toggle('hidden', isPreview);
         
@@ -175,7 +207,7 @@ export const UI = {
         
         if (schedIds.length === 0) {
             this.elements.savedSchedulesList.innerHTML = `
-                <div class="text-[0.7rem] text-text-muted italic p-3 text-center border border-dashed border-border rounded bg-canvas">
+                <div class="text-caption text-text-muted italic p-3 text-center border border-dashed border-border rounded bg-canvas">
                     No saved schedules.
                 </div>`;
             return;
@@ -191,13 +223,13 @@ export const UI = {
 
             if (isPinned) {
                 activeClass = 'selected-card bg-[var(--color-hover)] shadow-md';
-                textClass = 'text-main';
+                textClass = 'text-white';
             } else if (anyPinned) {
                 activeClass = 'border-border bg-surface hover:bg-surface-hover hover:border-border-border';
                 textClass = 'text-text-main group-hover:text-text-main';
             } else {
                 activeClass = 'border-border bg-surface hover:bg-[var(--color-hover)] hover:border-[var(--color-hover)]';
-                textClass = 'text-text-main group-hover:text-main';
+                textClass = 'text-text-main group-hover:text-white';
             }
             
             html += `
@@ -209,8 +241,8 @@ export const UI = {
                 <span class="text-sm font-medium ${textClass} transition-colors truncate text-left w-full pr-14" title="${sched.name}">${sched.name}</span>
                 
                 <div class="card-action-menu" style="top: 0.125rem; right: 0.125rem;">
-                    <button onclick="App.switchSchedule(event, '${id}')" class="btn-icon" title="Make Active"><i class="ph ph-arrow-right text-icon leading-none"></i></button>
-                    <button onclick="App.deleteSchedule(event, '${id}')" class="btn-icon-danger" title="Delete Schedule"><i class="ph ph-trash text-icon leading-none"></i></button>
+                    <button onclick="App.switchSchedule(event, '${id}')" class="btn-icon" title="Make Active"><i class="ph ph-arrow-right text-base leading-none"></i></button>
+                    <button onclick="App.deleteSchedule(event, '${id}')" class="btn-icon-danger" title="Delete Schedule"><i class="ph ph-trash text-base leading-none"></i></button>
                 </div>
             </div>`;
         });
