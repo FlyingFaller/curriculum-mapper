@@ -48,7 +48,7 @@ export const State = {
     },
     
     // Ephemeral UI State
-    compactMode: false,
+    compactMode: true,
     showBreakdown: false,
     selectedCourseId: null,
     pinnedNode: null,
@@ -78,7 +78,7 @@ export const State = {
             }
         };
         
-        this.compactMode = false;
+        this.compactMode = true;
         this.showBreakdown = false;
         this.selectedCourseId = null;
         this.pinnedNode = null;

@@ -2,13 +2,8 @@ import { State } from './state.js';
 import { UI } from './ui.js';
 
 export const Components = {
-    // ==========================================
-    // DATA CALCULATION
-    // ==========================================
     calculateBreakdowns() {
         if (!State.showBreakdown) return [];
-        
-        // Fast O(1) Map lookup for rendering
         let tagsMap = new Map();
         State.tags.forEach(t => {
             tagsMap.set(t.id, {
@@ -30,7 +25,6 @@ export const Components = {
         Object.values(State.courses).forEach(course => {
             const credits = course.credits || 0;
             const hasTags = course.tags && course.tags.length > 0;
-            
             if (!hasTags) untaggedBreakdown.bankTotal += credits;
             else course.tags.forEach(tId => {
                 const tagObj = tagsMap.get(tId);
@@ -43,10 +37,8 @@ export const Components = {
             activeCourseIds.forEach(cId => {
                 const course = State.courses[cId];
                 if (!course) return;
-                
                 const credits = course.credits || 0;
                 const hasTags = course.tags && course.tags.length > 0;
-                
                 if (!hasTags) untaggedBreakdown.termTotals[term.id] += credits;
                 else course.tags.forEach(tId => {
                     const tagObj = tagsMap.get(tId);
@@ -58,9 +50,6 @@ export const Components = {
         return [...Array.from(tagsMap.values()), untaggedBreakdown];
     },
 
-    // ==========================================
-    // GRID HTML GENERATORS
-    // ==========================================
     buildHeaders() {
         const breakdowns = this.calculateBreakdowns();
         let totalBankCredits = Object.values(State.courses).reduce((sum, c) => sum + (c.credits || 0), 0);
@@ -104,8 +93,8 @@ export const Components = {
             if (!State.isPreviewMode) {
                 termActionMenu = `
                 <div class="card-action-menu">
-                    <button onclick="UI.editTerm('${term.id}')" class="btn-icon"><i class="ph ph-pencil-simple text-base leading-none"></i></button>
-                    <button onclick="App.deleteTerm('${term.id}')" class="btn-icon-danger"><i class="ph ph-trash text-base leading-none"></i></button>
+                    <button data-action="edit-term" data-tid="${term.id}" class="btn-icon"><i class="ph ph-pencil-simple text-base leading-none"></i></button>
+                    <button data-action="delete-term" data-tid="${term.id}" class="btn-icon-danger"><i class="ph ph-trash text-base leading-none"></i></button>
                 </div>`;
             }
             
@@ -131,11 +120,10 @@ export const Components = {
         
         State.terms.forEach(term => {
             html += `<td class="cell-size p-2 align-top border-r border-b border-border bg-surface relative z-0">
-                <div class="flex flex-col gap-2 w-full">`;
+                <div class="flex flex-col gap-2 w-full" data-column-tid="${term.id}">`;
             let visibleHTML = '', hiddenHTML = '';
             sortedCourses.forEach(course => {
                 if (course.id === State.selectedCourseId) return; 
-
                 const cellData = State.displayedGrid[course.id]?.[term.id];
                 if (cellData?.active) {
                     if (cellData.hidden) hiddenHTML += this.generateCourseCardHTML(course, term, true, false);
@@ -153,13 +141,13 @@ export const Components = {
             
             html += `<tr class="sticky-bottom-row">
                 <td class="cell-size sticky-col align-top border-r border-border p-2">
-                    <div style="${activeCourseStyle}" class="course-card compact-mode-card selected-card flex flex-col justify-between group/card relative overflow-hidden m-0" onclick="App.selectCourse(null)">
+                    <div style="${activeCourseStyle}" class="course-card compact-mode-card selected-card flex flex-col justify-between group/card relative overflow-hidden m-0" data-action="select-course" data-cid="${activeCourse.id}">
                         <div class="flex flex-col w-full">
                             <span class="font-bold text-heading leading-tight truncate pr-8" title="${activeCourse.id}">${activeCourse.id}</span>
                             <div class="text-base opacity-90 truncate leading-tight mt-0.5" title="${activeCourse.title}">${activeCourse.title}</div>
                         </div>
                         <div class="card-action-menu">
-                            <button class="btn-icon-danger" onclick="event.stopPropagation(); App.selectCourse(null)" title="Close Editor">
+                            <button class="btn-icon-danger" data-action="select-course" data-cid="${activeCourse.id}" title="Close Editor">
                                 <i class="ph ph-x text-base leading-none"></i>
                             </button>
                         </div>
@@ -173,7 +161,7 @@ export const Components = {
                     html += this.generateCourseCardHTML(activeCourse, term, cellData.hidden, false);
                 } else {
                     html += `
-                        <div class="edit-target-zone" onclick="App.toggleCell('${activeCourse.id}', '${term.id}')">
+                        <div class="edit-target-zone" data-action="toggle-cell" data-cid="${activeCourse.id}" data-tid="${term.id}">
                             <i class="ph ph-plus text-2xl mb-0.5"></i>
                             <span class="text-micro font-bold uppercase tracking-wider">Add Here</span>
                         </div>
@@ -196,8 +184,8 @@ export const Components = {
             if (!State.isPreviewMode) {
                 courseActionMenu = `
                 <div class="card-action-menu">
-                    <button onclick="UI.editCourse('${course.id}')" class="btn-icon"><i class="ph ph-pencil-simple text-base leading-none"></i></button>
-                    <button onclick="App.deleteCourse('${course.id}')" class="btn-icon-danger"><i class="ph ph-trash text-base leading-none"></i></button>
+                    <button data-action="edit-course" data-cid="${course.id}" class="btn-icon"><i class="ph ph-pencil-simple text-base leading-none"></i></button>
+                    <button data-action="delete-course" data-cid="${course.id}" class="btn-icon-danger"><i class="ph ph-trash text-base leading-none"></i></button>
                 </div>`;
             }
 
@@ -212,7 +200,9 @@ export const Components = {
 
             State.terms.forEach(term => {
                 const cellData = State.displayedGrid[course.id]?.[term.id];
-                html += `<td class="cell-size course-cell-height p-0 align-top border-r border-b border-border bg-surface relative z-0" onclick="App.toggleCell('${course.id}', '${term.id}')">`;
+                html += `<td class="cell-size course-cell-height p-0 align-top border-r border-b border-border bg-surface relative z-0" 
+                             data-action="toggle-cell" data-cid="${course.id}" data-tid="${term.id}"
+                             data-cell-cid="${course.id}" data-cell-tid="${term.id}">`;
                 if (cellData?.active) html += this.generateCourseCardHTML(course, term, cellData.hidden, false);
                 html += `</td>`;
             });
@@ -221,7 +211,6 @@ export const Components = {
         return html;
     },
 
-    // --- Sub-components for Course Cards ---
     _buildCardTagDots(tags) {
         if (!tags || tags.length === 0) return '';
         let html = `<div class="card-tag-dots">`;
@@ -243,13 +232,13 @@ export const Components = {
         
         if (isBankCard) {
             buttons = `
-                <button class="btn-icon" onclick="event.stopPropagation(); UI.editCourse('${course.id}')" title="Edit Course"><i class="ph ph-pencil-simple text-base leading-none"></i></button>
-                <button class="btn-icon-danger" onclick="event.stopPropagation(); App.deleteCourse('${course.id}')" title="Delete Course"><i class="ph ph-trash text-base leading-none"></i></button>`;
+                <button class="btn-icon" data-action="edit-course" data-cid="${course.id}" title="Edit Course"><i class="ph ph-pencil-simple text-base leading-none"></i></button>
+                <button class="btn-icon-danger" data-action="delete-course" data-cid="${course.id}" title="Delete Course"><i class="ph ph-trash text-base leading-none"></i></button>`;
         } else {
             buttons = `
-                <button class="btn-icon-danger" onclick="App.hideDeadEnds(event, '${course.id}', '${term.id}')" title="Hide Dead Ends for this sequence"><i class="ph ph-magic-wand text-base leading-none"></i></button>
-                <button class="btn-icon" onclick="App.toggleHidden(event, '${course.id}', '${term.id}')" title="Toggle active status"><i class="ph ${eyeIcon} text-base leading-none"></i></button>
-                <button class="btn-icon-danger" onclick="App.removeCard(event, '${course.id}', '${term.id}')" title="Remove from term"><i class="ph ph-x text-base leading-none"></i></button>`;
+                <button class="btn-icon-danger" data-action="hide-dead-ends" data-cid="${course.id}" data-tid="${term.id}" title="Hide Dead Ends for this sequence"><i class="ph ph-magic-wand text-base leading-none"></i></button>
+                <button class="btn-icon" data-action="toggle-hidden" data-cid="${course.id}" data-tid="${term.id}" title="Toggle active status"><i class="ph ${eyeIcon} text-base leading-none"></i></button>
+                <button class="btn-icon-danger" data-action="remove-card" data-cid="${course.id}" data-tid="${term.id}" title="Remove from term"><i class="ph ph-x text-base leading-none"></i></button>`;
         }
         
         return `<div class="card-action-menu">${buttons}</div>`;
@@ -269,13 +258,14 @@ export const Components = {
         const selectedClass = (isBankCard && course.id === State.selectedCourseId) || isPinned ? 'selected-card' : '';
         
         let cStyleStr = (isBankCard && course.color) ? `background-color: ${course.color}; color: ${UI.utils.getContrastColor(course.color)};` : ``;
-        let onClickHandler = isBankCard ? `onclick="App.selectCourse('${course.id}')"` : `onclick="App.togglePin(event, '${course.id}', '${term ? term.id : 'bank'}')"`;
+        let actionHook = isBankCard ? 'select-course' : 'toggle-pin';
+        let tidVal = term ? term.id : 'bank';
 
         return `
             <div style="${cStyleStr}" class="course-card ${compactClass} ${hiddenClass} ${selectedClass} card-node flex flex-col justify-between group/card relative overflow-hidden" 
-                 data-cid="${course.id}" data-tid="${term ? term.id : 'bank'}" onmouseenter="UI.handleMouseOver('${course.id}', '${term ? term.id : 'bank'}')" onmouseleave="UI.handleMouseOut()" ${onClickHandler}>
+                 data-cid="${course.id}" data-tid="${tidVal}" data-action="${actionHook}">
                  <div class="flex flex-col w-full">
-                    <span class="font-bold text-heading leading-tight truncate pr-8 ${singletonStyles}" title="${course.id}">${course.id} <span class="font-normal text-meta text-text-main not-italic opacity-80">(${course.credits})</span></span>
+                    <span class="font-bold text-heading leading-tight truncate pr-8 ${singletonStyles}" title="${course.id}">${course.id} <span class="font-normal text-meta not-italic opacity-80">(${course.credits})</span></span>
                     <div class="text-base truncate leading-tight mt-0.5" title="${course.title}">${course.title}</div>
                  </div>
                  ${course.joint && course.joint.length ? `<div class="text-meta mt-auto font-medium opacity-80 truncate leading-tight pb-0.5 italic" title="Joint: ${course.joint.join(', ')}">Joint: ${course.joint.join(', ')}</div>` : `<div class="mt-auto"></div>`}
@@ -284,9 +274,6 @@ export const Components = {
             </div>`;
     },
 
-    // ==========================================
-    // MODAL & FORM HTML GENERATORS
-    // ==========================================
     buildGlobalTagsHTML() {
         return State.tags.map(tag => {
             const iconClass = tag.icon || 'ph-circle';
@@ -297,8 +284,8 @@ export const Components = {
                     <span class="text-sm font-medium">${tag.name}</span>
                 </div>
                 <div class="flex gap-1">
-                    <button onclick="UI.openTagEditor('${tag.id}')" class="btn-icon"><i class="ph ph-pencil-simple text-base"></i></button>
-                    <button onclick="App.deleteTag('${tag.id}')" class="btn-icon-danger"><i class="ph ph-trash text-base"></i></button>
+                    <button data-action="open-tag-editor" data-cid="${tag.id}" class="btn-icon"><i class="ph ph-pencil-simple text-base"></i></button>
+                    <button data-action="delete-tag" data-cid="${tag.id}" class="btn-icon-danger"><i class="ph ph-trash text-base"></i></button>
                 </div>
             </div>`;
         }).join('');
@@ -332,7 +319,7 @@ export const Components = {
             const isSelected = icon === selectedIcon;
             const activeClass = isSelected ? 'border-accent bg-accent-bg' : 'border-transparent text-text-muted hover:bg-surface-hover';
             const styleStr = isSelected ? `style="color: ${currentColor};"` : '';
-            return `<button type="button" onclick="UI.selectIcon('${icon}')" class="flex justify-center items-center p-1 border rounded cursor-pointer transition-colors ${activeClass}">
+            return `<button type="button" data-action="select-icon" data-value="${icon}" class="flex justify-center items-center p-1 border rounded cursor-pointer transition-colors ${activeClass}">
                 <i class="ph-fill ${icon} text-lg drop-shadow-sm" ${styleStr}></i>
             </button>`;
         }).join('');

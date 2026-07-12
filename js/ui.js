@@ -3,9 +3,6 @@ import { HoverEngine } from './hover.js';
 import { Components } from './components.js';
 
 export const UI = {
-    // ==========================================
-    // CONFIG, STATE & DOM CACHE
-    // ==========================================
     config: {
         defaultTermColor: '',
         defaultCourseColor: '',
@@ -44,10 +41,7 @@ export const UI = {
             return acc;
         }, {});
 
-        // Dynamically auto-contrast legend text on initial load
         this.updateLegendContrast();
-
-        // Listen for Theme changes on the <html> tag to re-evaluate contrast
         const themeObserver = new MutationObserver(() => this.updateLegendContrast());
         themeObserver.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
     },
@@ -74,17 +68,13 @@ export const UI = {
             }
             
             let yiq = ((r * 299) + (g * 587) + (b * 114)) / 1000;
-            // Returning exact hexes here overrides inline theme inversions.
             return (yiq >= 128) ? '#000000' : '#ffffff';
         },
         setColoris(selectorOrEl, color) {
-            // Check if we were passed a string selector (like '#course-color') or an element directly
             const el = typeof selectorOrEl === 'string' ? document.querySelector(selectorOrEl) : selectorOrEl;
-            
             if (el) {
                 el.value = color;
                 el.dispatchEvent(new Event('input', { bubbles: true }));
-                // Dispatch 'change' to ensure the Coloris visual swatch UI updates correctly
                 el.dispatchEvent(new Event('change', { bubbles: true }));
             }
         }
@@ -106,9 +96,6 @@ export const UI = {
         }
     },
 
-    // ==========================================
-    // INITIALIZATION & RESIZERS
-    // ==========================================
     initColoris() {
         if(window.Coloris) {
             Coloris({
@@ -149,9 +136,6 @@ export const UI = {
         });
     },
 
-    // ==========================================
-    // CORE RENDERING 
-    // ==========================================
     updateLegendContrast() {
         document.querySelectorAll('.legend-item').forEach(el => {
             const computedBg = getComputedStyle(el).backgroundColor;
@@ -159,7 +143,7 @@ export const UI = {
         });
     },
 
-    renderTable() {
+    updateScheduleDisplay() {
         const activeSched = State.schedules[State.activeScheduleId];
         if (activeSched) {
             this.elements.activeScheduleName.value = activeSched.name;
@@ -178,14 +162,23 @@ export const UI = {
                 this.elements.previewScheduleText.innerText = displayedSched.name;
             }
         }
-        
+    },
+
+    renderTable() {
+        this.updateScheduleDisplay(); // Call it here
+        this.elements.scheduleTable.classList.toggle('compact-table', State.compactMode);
+        this.elements.tableHead.innerHTML = Components.buildHeaders();
+        this.renderBody();
+
+        if (State.pinnedNode) this.handleMouseOver(State.pinnedNode.cId, State.pinnedNode.tId, true);
+    },
+
+    // Optimized Target Rendering
+    renderBody() {
         let savedScrollPos = 0;
         const existingContainer = document.querySelector('.course-bank-container');
         if (existingContainer) savedScrollPos = existingContainer.scrollTop;
 
-        this.elements.scheduleTable.classList.toggle('compact-table', State.compactMode);
-        this.elements.tableHead.innerHTML = Components.buildHeaders();
-        
         const sortedCourses = Object.values(State.courses).sort((a,b) => a.id.localeCompare(b.id));
 
         if (State.compactMode) {
@@ -195,13 +188,30 @@ export const UI = {
         } else {
             this.elements.tableBody.innerHTML = Components.buildStandardBody(sortedCourses);
         }
+    },
 
-        if (State.pinnedNode) this.handleMouseOver(State.pinnedNode.cId, State.pinnedNode.tId, true);
+    // Efficiently repaints just a targeted node 
+    refreshCell(cId, tId) {
+        if (State.compactMode) {
+            this.renderBody();
+        } else {
+            const td = document.querySelector(`td[data-cell-cid="${cId}"][data-cell-tid="${tId}"]`);
+            if (td) {
+                const cellData = State.displayedGrid[cId]?.[tId];
+                if (cellData?.active) {
+                    const course = State.courses[cId];
+                    const term = State.terms.find(t => t.id === tId);
+                    td.innerHTML = Components.generateCourseCardHTML(course, term, cellData.hidden, false);
+                } else {
+                    td.innerHTML = '';
+                }
+            }
+            this.elements.tableHead.innerHTML = Components.buildHeaders(); // Update headers (credits counts)
+        }
     },
 
     renderSidebarSchedules() {
         if (!this.elements.savedSchedulesList) return;
-
         const schedIds = Object.keys(State.schedules).filter(id => id !== State.activeScheduleId);
         const anyPinned = !!State.pinnedScheduleId; 
         
@@ -225,7 +235,7 @@ export const UI = {
                 activeClass = 'selected-card bg-[var(--color-hover)] shadow-md';
                 textClass = 'text-white';
             } else if (anyPinned) {
-                activeClass = 'border-border bg-surface hover:bg-surface-hover hover:border-border-border';
+                activeClass = 'border-border bg-surface hover:bg-surface-hover hover:border-border-focus';
                 textClass = 'text-text-main group-hover:text-text-main';
             } else {
                 activeClass = 'border-border bg-surface hover:bg-[var(--color-hover)] hover:border-[var(--color-hover)]';
@@ -233,16 +243,12 @@ export const UI = {
             }
             
             html += `
-            <div class="border ${activeClass} rounded-md shadow-sm p-2 flex items-center group relative cursor-pointer transition-colors duration-200"
-                 onmouseenter="App.hoverSchedule('${id}')"
-                 onmouseleave="App.unhoverSchedule()"
-                 onclick="App.togglePinSchedule('${id}')">
-                
+            <div class="schedule-item border ${activeClass} rounded-md shadow-sm p-2 flex items-center group relative cursor-pointer transition-colors duration-200"
+                 data-sid="${id}" data-action="toggle-pin-schedule" data-value="${id}">
                 <span class="text-sm font-medium ${textClass} transition-colors truncate text-left w-full pr-14" title="${sched.name}">${sched.name}</span>
-                
                 <div class="card-action-menu" style="top: 0.125rem; right: 0.125rem;">
-                    <button onclick="App.switchSchedule(event, '${id}')" class="btn-icon" title="Make Active"><i class="ph ph-arrow-right text-base leading-none"></i></button>
-                    <button onclick="App.deleteSchedule(event, '${id}')" class="btn-icon-danger" title="Delete Schedule"><i class="ph ph-trash text-base leading-none"></i></button>
+                    <button data-action="switch-schedule" data-value="${id}" class="btn-icon" title="Make Active"><i class="ph ph-arrow-right text-base leading-none"></i></button>
+                    <button data-action="delete-schedule" data-value="${id}" class="btn-icon-danger" title="Delete Schedule"><i class="ph ph-trash text-base leading-none"></i></button>
                 </div>
             </div>`;
         });
@@ -250,9 +256,6 @@ export const UI = {
         this.elements.savedSchedulesList.innerHTML = html;
     },
 
-    // ==========================================
-    // HOVER & FOOTER ENGINE
-    // ==========================================
     updateFooter(cId) {
         const cData = State.courses[cId];
         if(!cData) return;
@@ -285,13 +288,19 @@ export const UI = {
         }
 
         this.updateFooter(cId);
-        const classesToRemove = ['hl-hover', 'hl-imm-pre', 'hl-sec-pre', 'hl-post', 'hl-coreq', 'hl-err-temp', 'hl-err-miss'];
-        
-        document.querySelectorAll('.card-node').forEach(node => node.classList.remove(...classesToRemove));
-
         const { highlights, status } = HoverEngine.analyze(cId, tId);
 
+        const semanticToClass = {
+            'immediatePrereq': 'hl-imm-pre',
+            'secondaryPrereq': 'hl-sec-pre',
+            'postrequisite': 'hl-post',
+            'corequisite': 'hl-coreq',
+            'errorTemp': 'hl-err-temp'
+        };
+
         document.querySelectorAll('.card-node').forEach(node => {
+            node.classList.remove('hl-hover', 'hl-imm-pre', 'hl-sec-pre', 'hl-post', 'hl-coreq', 'hl-err-temp', 'hl-err-miss');
+            
             const nodeCid = node.getAttribute('data-cid');
             const nodeTid = node.getAttribute('data-tid');
             
@@ -301,7 +310,7 @@ export const UI = {
                 else node.classList.add('hl-hover');
             } else {
                 const key = `${nodeCid}_${nodeTid}`;
-                if (highlights[key]) node.classList.add(highlights[key]);
+                if (highlights[key]) node.classList.add(semanticToClass[highlights[key]]);
             }
         });
     },
@@ -319,9 +328,6 @@ export const UI = {
         document.querySelectorAll('.card-node').forEach(node => node.classList.remove(...classesToRemove));
     },
 
-    // ==========================================
-    // ENTITY MODALS & FORMS
-    // ==========================================
     openTermModal() {
         this.elements.termName.dataset.id = '';
         this.elements.termName.value = '';
@@ -351,7 +357,6 @@ export const UI = {
     editCourse(cId) {
         const c = State.courses[cId];
         if(!c) return;
-
         this.renderCourseTagsForm(c.tags || []);
         this.elements.courseForm.dataset.originalId = c.id;
         this.elements.courseId.value = c.id;
@@ -402,7 +407,6 @@ export const UI = {
     toggleTagConstraints() {
         const isEnabled = this.elements.tagEditEnableConstraints.checked;
         const reqType = this.elements.tagEditReqType.value;
-        
         this.elements.tagConstraintsContainer.classList.toggle('hidden', !isEnabled);
         this.elements.tagWeightContainer.classList.toggle('hidden', !isEnabled || reqType !== 'optional');
     },
@@ -450,17 +454,10 @@ export const UI = {
         this.modals.open(this.elements.whitelistModal, this.elements.whitelistInput);
     },
 
-    // ==========================================
-    // SCHEDULE GENERATOR
-    // ==========================================
-
     toggleGeneratorSidebar() {
         this.elements.generatorSidebar.classList.toggle('-translate-x-full');
     },
 
-    // ==========================================
-    // MISC UI UTILITIES
-    // ==========================================
     showConfirm(title, msg, onConfirmCallback) {
         this.elements.confirmTitle.innerText = title;
         this.elements.confirmMessage.innerText = msg;

@@ -3,11 +3,9 @@ import { State } from './state.js';
 import { Storage } from './storage.js';
 import { HoverEngine } from './hover.js';
 import { UI } from './ui.js';
+import { setupEventListeners } from './events.js';
 
-const App = {
-    // ==========================================
-    // INITIALIZATION
-    // ==========================================
+export const App = {
     init() {
         ThemeConfig.init();
         if (!Storage.load()) {
@@ -21,26 +19,14 @@ const App = {
         UI.renderSidebarSchedules();
         UI.initResizer();
 
-        document.addEventListener('keydown', (e) => {
-            if (e.key === 'Escape') {
-                if (State.pinnedNode) App.clearPin();
-                if (State.pinnedScheduleId) {
-                    State.pinnedScheduleId = null;
-                    UI.renderSidebarSchedules();
-                    UI.renderTable();
-                }
-            }
-        });
+        setupEventListeners();
     },
 
-    // ==========================================
-    // GLOBAL ACTIONS
-    // ==========================================
     toggleCompactMode() {
         State.compactMode = !State.compactMode;
         if (!State.compactMode) State.selectedCourseId = null; 
         
-        const btn = UI.elements.compactToggle;
+        const btn = document.getElementById('compact-toggle');
         const icon = btn.querySelector('i');
         
         if (State.compactMode) {
@@ -58,7 +44,7 @@ const App = {
     toggleBreakdown() {
         State.showBreakdown = !State.showBreakdown;
         
-        const btn = UI.elements.breakdownToggle;
+        const btn = document.getElementById('breakdown-toggle');
         if (State.showBreakdown) {
             btn.classList.add('text-accent');
             btn.classList.remove('text-text-muted');
@@ -78,7 +64,7 @@ const App = {
                 });
             });
             Storage.save();
-            UI.renderTable();
+            UI.renderBody(); 
         });
     },
 
@@ -111,7 +97,7 @@ const App = {
                 }
             }
             Storage.save();
-            UI.renderTable();
+            UI.renderBody(); 
         });
     },
 
@@ -127,26 +113,22 @@ const App = {
     },
 
     saveWhitelist() {
-        const rawInput = UI.elements.whitelistInput.value;
+        const rawInput = document.getElementById('whitelist-input').value;
         State.whitelist = UI.utils.parseList(rawInput);
         Storage.save();
         UI.modals.closeAll();
         UI.renderTable();
     },
 
-    // ==========================================
-    // ENTITY MANAGEMENT (Courses, Terms, Tags)
-    // ==========================================
     saveCourse() {
-        const rawId = UI.elements.courseId.value;
+        const rawId = document.getElementById('course-id').value;
         const id = UI.utils.sanitizeId(rawId);
         if(!id) return alert("Course ID is required.");
         
-        const originalId = UI.elements.courseForm.dataset.originalId;
-        const colorVal = UI.elements.courseColor.value;
+        const originalId = document.getElementById('course-form').dataset.originalId;
+        const colorVal = document.getElementById('course-color').value;
         const color = colorVal !== UI.config.defaultCourseColor ? colorVal : '';
 
-        // Safely update all relational references centrally
         if (originalId && originalId !== id) {
             if (State.courses[id]) return alert("A course with this new ID already exists!");
             State.updateCourseId(originalId, id);
@@ -156,13 +138,13 @@ const App = {
 
         State.courses[id] = {
             id: id,
-            title: UI.elements.courseTitle.value.trim(),
-            credits: parseInt(UI.elements.courseCredits.value) || 0,
-            prereqs: UI.utils.parseList(UI.elements.coursePrereqs.value),
-            coreqs: UI.utils.parseList(UI.elements.courseCoreqs.value),
-            joint: UI.utils.parseList(UI.elements.courseJoint.value),
+            title: document.getElementById('course-title').value.trim(),
+            credits: parseInt(document.getElementById('course-credits').value) || 0,
+            prereqs: UI.utils.parseList(document.getElementById('course-prereqs').value),
+            coreqs: UI.utils.parseList(document.getElementById('course-coreqs').value),
+            joint: UI.utils.parseList(document.getElementById('course-joint').value),
             tags: selectedTags,
-            desc: UI.elements.courseDesc.value.trim(),
+            desc: document.getElementById('course-desc').value.trim(),
             color: color
         };
 
@@ -173,6 +155,10 @@ const App = {
 
     deleteCourse(courseId) {
         UI.showConfirm("Delete Course", `Delete course ${courseId} completely?`, () => {
+            // Clear UI states if the course being deleted is currently active
+            if (State.pinnedNode && State.pinnedNode.cId === courseId) this.clearPin();
+            if (State.selectedCourseId === courseId) State.selectedCourseId = null;
+            
             State.deleteCourse(courseId);
             Storage.save();
             UI.renderTable();
@@ -180,12 +166,12 @@ const App = {
     },
 
     saveTerm() {
-        const name = UI.elements.termName.value.trim();
+        const name = document.getElementById('term-name').value.trim();
         if (!name) return;
         
-        const colorVal = UI.elements.termColor.value;
+        const colorVal = document.getElementById('term-color').value;
         const color = colorVal !== UI.config.defaultTermColor ? colorVal : '';
-        const id = UI.elements.termName.dataset.id;
+        const id = document.getElementById('term-name').dataset.id;
         
         if (id) {
             const term = State.terms.find(t => t.id === id);
@@ -217,34 +203,30 @@ const App = {
     },
 
     saveTag() {
-        const idInput = UI.elements.tagEditId.value;
-        const name = UI.elements.tagEditName.value.trim();
-        const color = UI.elements.tagEditColor.value;
-        const icon = UI.elements.tagEditIconVal.value || 'ph-circle';
+        const idInput = document.getElementById('tag-edit-id').value;
+        const name = document.getElementById('tag-edit-name').value.trim();
+        const color = document.getElementById('tag-edit-color').value;
+        const icon = document.getElementById('tag-edit-icon-val').value || 'ph-circle';
 
         if (!name) return alert("Tag name is required");
 
         let constraints = null;
-        if (UI.elements.tagEditEnableConstraints.checked) {
-            const maxVal = UI.elements.tagEditMax.value;
+        if (document.getElementById('tag-edit-enable-constraints').checked) {
+            const maxVal = document.getElementById('tag-edit-max').value;
             constraints = {
-                type: UI.elements.tagEditReqType.value,
-                metric: UI.elements.tagEditMetric.value,
-                min: parseInt(UI.elements.tagEditMin.value) || 0,
+                type: document.getElementById('tag-edit-req-type').value,
+                metric: document.getElementById('tag-edit-metric').value,
+                min: parseInt(document.getElementById('tag-edit-min').value) || 0,
                 max: maxVal ? parseInt(maxVal) : null,
-                weight: parseInt(UI.elements.tagEditWeight.value) || 5
+                weight: parseInt(document.getElementById('tag-edit-weight').value) || 5
             };
         }
 
         let newTagId = null; 
-
         if (idInput) {
             const tag = State.tags.find(t => t.id === idInput);
             if (tag) { 
-                tag.name = name; 
-                tag.color = color; 
-                tag.icon = icon; 
-                tag.constraints = constraints;
+                tag.name = name; tag.color = color; tag.icon = icon; tag.constraints = constraints;
             }
         } else {
             newTagId = 'tag-' + Date.now();
@@ -259,7 +241,7 @@ const App = {
         if (newTagId) checkedBoxes.push(newTagId);
 
         UI.renderCourseTagsForm(checkedBoxes); 
-        UI.renderTable();
+        UI.renderBody(); 
     },
 
     deleteTag(tagId) {
@@ -273,30 +255,30 @@ const App = {
         });
     },
 
-    // ==========================================
-    // GRID INTERACTIONS
-    // ==========================================
-    togglePin(event, courseId, termId) {
-        event.stopPropagation(); 
+    togglePin(courseId, termId) {
         if (State.pinnedNode && State.pinnedNode.cId === courseId && State.pinnedNode.tId === termId) {
             this.clearPin();
         } else {
             State.pinnedNode = { cId: courseId, tId: termId };
-            UI.renderTable(); 
+            UI.renderBody(); 
             UI.handleMouseOver(courseId, termId, true);
         }
     },
 
     clearPin() {
         State.pinnedNode = null;
-        UI.renderTable();
+        UI.renderBody();
         UI.handleMouseOut();
     },
 
     selectCourse(courseId) {
         if (State.isPreviewMode) return;
+        
+        // Clear any active pins to prevent visual conflicts when toggling the editor
+        if (State.pinnedNode) this.clearPin();
+        
         State.selectedCourseId = (State.selectedCourseId === courseId) ? null : courseId;
-        UI.renderTable();
+        UI.renderBody();
     },
 
     toggleCell(courseId, termId) {
@@ -305,36 +287,48 @@ const App = {
         if (!State.activeGrid[courseId][termId]?.active) {
             State.activeGrid[courseId][termId] = { active: true, hidden: false };
             Storage.save();
-            UI.renderTable();
+            UI.refreshCell(courseId, termId);
+            
+            if (State.pinnedNode) UI.handleMouseOver(State.pinnedNode.cId, State.pinnedNode.tId, true);
         }
     },
 
-    removeCard(event, courseId, termId) {
-        event.stopPropagation(); 
+    removeCard(courseId, termId) {
         if (State.activeGrid[courseId]?.[termId]) {
+            // 1. Clear the pin if the specific instance being deleted is the pinned one
+            if (State.pinnedNode && State.pinnedNode.cId === courseId && State.pinnedNode.tId === termId) {
+                this.clearPin();
+            }
+
             State.activeGrid[courseId][termId].active = false;
             Storage.save();
-            UI.renderTable();
-            UI.handleMouseOut();
+            UI.refreshCell(courseId, termId);
+            
+            // 2. Refresh highlights to reflect the change, or clear them if unpinned
+            if (State.pinnedNode) {
+                UI.handleMouseOver(State.pinnedNode.cId, State.pinnedNode.tId, true);
+            } else {
+                UI.handleMouseOut();
+            }
         }
     },
 
-    toggleHidden(event, courseId, termId) {
-        event.stopPropagation();
+    toggleHidden(courseId, termId) {
         if (State.activeGrid[courseId]?.[termId]) {
             State.activeGrid[courseId][termId].hidden = !State.activeGrid[courseId][termId].hidden;
             Storage.save();
-            UI.renderTable();
+            UI.refreshCell(courseId, termId);
+            
+            if (State.pinnedNode) UI.handleMouseOver(State.pinnedNode.cId, State.pinnedNode.tId, true);
         }
     },
 
-    hideDeadEnds(event, courseId, termId) {
-        event.stopPropagation();
+    hideDeadEnds(courseId, termId) {
         const { highlights } = HoverEngine.analyze(courseId, termId);
         let hiddenCount = 0;
         
-        for (const [key, highlightClass] of Object.entries(highlights)) {
-            if (highlightClass === 'hl-err-temp') {
+        for (const [key, semantic] of Object.entries(highlights)) {
+            if (semantic === 'errorTemp') {
                 const [targetCid, targetTid] = key.split('_');
                 if (State.activeGrid[targetCid] && State.activeGrid[targetCid][targetTid]) {
                     State.activeGrid[targetCid][targetTid].hidden = true;
@@ -345,20 +339,18 @@ const App = {
 
         if (hiddenCount > 0) {
             Storage.save();
-            UI.renderTable();
+            UI.renderBody();
             UI.handleMouseOver(courseId, termId, true); 
         }
     },
-
-    // --- Schedule Preview & Management ---
 
     updateScheduleName(newName) {
         if (State.schedules[State.activeScheduleId]) {
             State.schedules[State.activeScheduleId].name = newName;
             State.schedules[State.activeScheduleId].lastModified = Date.now();
             Storage.save();
-            if (UI.elements.sidebarActiveName) {
-                UI.elements.sidebarActiveName.innerText = newName;
+            if (document.getElementById('sidebar-active-name')) {
+                document.getElementById('sidebar-active-name').innerText = newName;
             }
         }
     },
@@ -369,41 +361,35 @@ const App = {
 
         const newId = 'sched-' + Date.now();
         const newName = currentSched.name + ' Copy';
-        
-        // Deep copy the grid to prevent reference mutation
         const gridCopy = JSON.parse(JSON.stringify(currentSched.grid));
 
-        State.schedules[newId] = {
-            name: newName,
-            lastModified: Date.now(),
-            grid: gridCopy
-        };
-
+        State.schedules[newId] = { name: newName, lastModified: Date.now(), grid: gridCopy };
         Storage.save();
         UI.renderSidebarSchedules();
     },
 
     hoverSchedule(id) {
-        if (State.pinnedScheduleId) return; // Ignore hover if something is pinned
+        if (State.pinnedScheduleId) return; 
         State.hoveredScheduleId = id;
-        UI.renderTable();
+        UI.updateScheduleDisplay(); // Updates the "Previewing..." header
+        UI.renderBody();
     },
 
     unhoverSchedule() {
         if (State.pinnedScheduleId) return;
         State.hoveredScheduleId = null;
-        UI.renderTable();
+        UI.updateScheduleDisplay(); // Updates the "Previewing..." header
+        UI.renderBody();
     },
 
     togglePinSchedule(id) {
         State.pinnedScheduleId = (State.pinnedScheduleId === id) ? null : id;
-        State.hoveredScheduleId = null; // Clear hover state
+        State.hoveredScheduleId = null; 
         UI.renderSidebarSchedules();
         UI.renderTable();
     },
 
-    switchSchedule(event, scheduleId) {
-        event.stopPropagation();
+    switchSchedule(scheduleId) {
         if (State.schedules[scheduleId]) {
             State.activeScheduleId = scheduleId;
             State.pinnedScheduleId = null;
@@ -414,8 +400,7 @@ const App = {
         }
     },
 
-    deleteSchedule(event, scheduleId) {
-        event.stopPropagation();
+    deleteSchedule(scheduleId) {
         UI.showConfirm("Delete Schedule", "Are you sure you want to permanently delete this schedule?", () => {
             delete State.schedules[scheduleId];
             if (State.pinnedScheduleId === scheduleId) State.pinnedScheduleId = null;
@@ -426,13 +411,5 @@ const App = {
         });
     },
 };
-
-window.ThemeConfig = ThemeConfig;
-window.State = State;
-window.Storage = Storage;
-window.HoverEngine = HoverEngine;
-window.UI = UI;
-window.Components = window.Components || {};
-window.App = App;
 
 document.addEventListener('DOMContentLoaded', () => App.init());
