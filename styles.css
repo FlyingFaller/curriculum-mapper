@@ -1,3 +1,42 @@
+@import "tailwindcss";
+
+/* Retain manual dark mode toggling using the .dark class */
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* Map your CSS variables to Tailwind utility classes */
+@theme {
+  --color-canvas: var(--bg-canvas);
+  --color-surface: var(--bg-surface);
+  --color-surface-mid: var(--bg-surface-mid);
+  --color-surface-hover: var(--bg-surface-hover);
+  --color-surface-alt: var(--bg-surface-alt);
+  
+  --color-text-main: var(--text-main);
+  --color-text-muted: var(--text-muted);
+  --color-text-inverse: var(--text-inverse);
+  
+  --color-border: var(--border-color);
+  --color-border-focus: var(--border-focus);
+  
+  --color-accent: var(--accent-main);
+  --color-accent-hover: var(--accent-hover);
+  --color-accent-bg: var(--accent-bg);
+  --color-accent-text: var(--accent-text);
+  
+  --color-danger-main: var(--danger-main);
+  --color-danger-hover: var(--danger-hover);
+  --color-danger-bg: var(--danger-bg);
+  --color-danger-border: var(--danger-border);
+
+  --text-micro: 0.65rem;
+  --text-caption: 0.75rem;
+  --text-meta: 0.85rem;
+  --text-base: 1rem;
+  --text-heading: 1.1rem;
+  --text-title-sm: 1.125rem;
+  --text-title-lg: 1.5rem;
+}
+
 /* =========================================
    CENTRALIZED SEMANTIC TOKENS
    ========================================= */
@@ -87,19 +126,48 @@ body { font-family: "Source Sans Pro", -apple-system, BlinkMacSystemFont, "Segoe
    ========================================= */
 .table-container { max-height: calc(100vh - 250px); overflow: auto; }
 
+/* table { 
+    border-collapse: separate; 
+    border-spacing: 0; 
+    border: 1px solid var(--border-color); 
+    table-layout: fixed; 
+    width: max-content; 
+    min-width: 100%;
+} */
+
 table { 
-    border-collapse: separate; border-spacing: 0; 
-    border: 1px solid var(--border-color); table-layout: fixed; width: max-content; 
+    border-collapse: separate; 
+    border-spacing: 0; 
+    border: 1px solid var(--border-color); 
+    table-layout: fixed; 
+    width: 100%; /* Force standard fixed distribution across the table space */
+    min-width: min-content; /* Structural floor container */
 }
 
-.cell-size { width: 13rem; min-width: 13rem; max-width: 13rem; box-sizing: border-box; }
+.cell-size {
+    /* width: 13rem;  */
+    min-width: 13rem; 
+    /* max-width: 13rem;  */
+    box-sizing: border-box; }
+
+thead th.cell-size {
+    width: 13rem;
+}
 
 thead th {
     position: sticky; top: -1px; z-index: 20;
     box-shadow: 0 1px 0 0 var(--border-color); background-clip: padding-box; min-height: 3.5rem;
 }
 
-.sticky-col { position: sticky; left: 0; z-index: 10; box-shadow: inset -1px 0 0 var(--border-color), 2px 0 4px -2px rgba(0, 0, 0, 0.05); }
+.sticky-col {
+    position: sticky; 
+    left: 0; 
+    z-index: 10; 
+    box-shadow: inset -1px 0 0 var(--border-color), 2px 0 4px -2px rgba(0, 0, 0, 0.05); 
+    width: 13rem;
+    min-width: 13rem;
+    max-width: 13rem;
+}
 thead th.sticky-col { z-index: 40; box-shadow: inset -1px 0 0 var(--border-color), 0 1px 0 0 var(--border-color), 2px 0 4px -2px rgba(0, 0, 0, 0.05); }
 
 /* =========================================

@@ -1,0 +1,30 @@
+{
+  "name": "curriculum-mapper",
+  "version": "1.0.0",
+  "description": "A simple way to visualize course offerings and prerequisite chains inspired from UIUC's curriculum maps.",
+  "main": "index.js",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/FlyingFaller/curriculum-mapper.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/FlyingFaller/curriculum-mapper/issues"
+  },
+  "homepage": "https://github.com/FlyingFaller/curriculum-mapper#readme",
+  "devDependencies": {
+    "vite": "^8.1.4"
+  },
+  "dependencies": {
+    "@tailwindcss/vite": "^4.3.2",
+    "tailwindcss": "^4.3.2"
+  }
+}

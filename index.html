@@ -4,57 +4,14 @@
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>Curriculum Map Builder</title>
-        <script src="https://cdn.tailwindcss.com"></script>
-        <script>
-            tailwind.config = {
-                darkMode: 'class', 
-                theme: {
-                    extend: {
-                        colors: {
-                            canvas: 'var(--bg-canvas)',
-                            surface: 'var(--bg-surface)',
-                            'surface-mid': 'var(--bg-surface-mid)', 
-                            'surface-hover': 'var(--bg-surface-hover)',
-                            'surface-alt': 'var(--bg-surface-alt)',
-                            'text-main': 'var(--text-main)',
-                            'text-muted': 'var(--text-muted)',
-                            'text-inverse': 'var(--text-inverse)',
-                            border: 'var(--border-color)',
-                            'border-focus': 'var(--border-focus)',
-                            accent: 'var(--accent-main)',
-                            'accent-hover': 'var(--accent-hover)',
-                            'accent-bg': 'var(--accent-bg)',
-                            'accent-text': 'var(--accent-text)',
-                            
-                            // Nest the danger colors to support hyphenated classes (e.g., bg-danger-main)
-                            danger: {
-                                main: 'var(--danger-main)',
-                                hover: 'var(--danger-hover)',
-                                bg: 'var(--danger-bg)',
-                                border: 'var(--danger-border)'
-                            }
-                        },
-                        fontSize: {
-                            'micro': '0.65rem',
-                            'caption': '0.75rem', 
-                            'meta': '0.85rem',
-                            'base': '1rem',
-                            'heading': '1.1rem',
-                            'title-sm': '1.125rem',
-                            'title-lg': '1.5rem'
-                        }
-                    }
-                }
-            }
-        </script>
+
         <script src="https://unpkg.com/@phosphor-icons/web"></script>
-        
         <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/mdbassit/Coloris@latest/dist/coloris.min.css"/>
         <script src="https://cdn.jsdelivr.net/gh/mdbassit/Coloris@latest/dist/coloris.min.js"></script>
         <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
         <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
         
-        <link rel="stylesheet" href="styles.css">
+        <link rel="stylesheet" href="/styles.css">
     </head>
     <body class="bg-canvas flex flex-col h-screen overflow-hidden text-sm text-text-main transition-colors duration-200">
 
@@ -485,6 +442,6 @@
             </div>
         </div>
 
-        <script type="module" src="js/main.js"></script>
+        <script type="module" src="/js/main.js"></script>
     </body>
 </html>
