@@ -4,6 +4,8 @@ import { Storage } from './storage.js';
 import { HoverEngine } from './hover.js';
 import { UI } from './ui.js';
 import { setupEventListeners } from './events.js';
+import { parseCurriculumState } from './parser.js';
+import { generateOptimalSchedule } from './solver.js';
 
 export const App = {
     init() {
@@ -59,12 +61,10 @@ export const App = {
         if (State.isPreviewMode) return;
         UI.showConfirm("Unhide All", "Are you sure you want to make all hidden course cards visible?", () => {
             Object.values(State.activeGrid).forEach(termMap => {
-                Object.values(termMap).forEach(cell => {
-                    if (cell.active) cell.hidden = false;
-                });
+                Object.keys(termMap).forEach(tId => termMap[tId] = true);
             });
             Storage.save();
-            UI.renderBody(); 
+            UI.renderTable();
         });
     },
 
@@ -83,8 +83,8 @@ export const App = {
                 const allCourses = Object.keys(State.activeGrid);
                 for (const cId of allCourses) {
                     for (const tId in State.activeGrid[cId]) {
-                        let cell = State.activeGrid[cId][tId];
-                        if (cell.active && !cell.hidden) {
+                        let isVisible = State.activeGrid[cId][tId];
+                        if (isVisible === true) {
                             let { status } = HoverEngine.analyze(cId, tId);
                             if (status.hasTempError || status.hasMissError) toHide.push({ cId, tId });
                         }
@@ -92,12 +92,12 @@ export const App = {
                 }
 
                 if (toHide.length > 0) {
-                    toHide.forEach(({ cId, tId }) => State.activeGrid[cId][tId].hidden = true);
+                    toHide.forEach(({ cId, tId }) => State.activeGrid[cId][tId] = false);
                     changed = true; 
                 }
             }
             Storage.save();
-            UI.renderBody(); 
+            UI.renderTable();
         });
     },
 
@@ -284,8 +284,8 @@ export const App = {
     toggleCell(courseId, termId) {
         if (State.isPreviewMode) return;
         if (!State.activeGrid[courseId]) State.activeGrid[courseId] = {};
-        if (!State.activeGrid[courseId][termId]?.active) {
-            State.activeGrid[courseId][termId] = { active: true, hidden: false };
+        if (State.activeGrid[courseId][termId] === undefined) {
+            State.activeGrid[courseId][termId] = true;
             Storage.save();
             UI.refreshCell(courseId, termId);
             
@@ -294,17 +294,15 @@ export const App = {
     },
 
     removeCard(courseId, termId) {
-        if (State.activeGrid[courseId]?.[termId]) {
-            // 1. Clear the pin if the specific instance being deleted is the pinned one
+        if (State.activeGrid[courseId]?.[termId] !== undefined) {
             if (State.pinnedNode && State.pinnedNode.cId === courseId && State.pinnedNode.tId === termId) {
                 this.clearPin();
             }
 
-            State.activeGrid[courseId][termId].active = false;
+            delete State.activeGrid[courseId][termId];
             Storage.save();
             UI.refreshCell(courseId, termId);
             
-            // 2. Refresh highlights to reflect the change, or clear them if unpinned
             if (State.pinnedNode) {
                 UI.handleMouseOver(State.pinnedNode.cId, State.pinnedNode.tId, true);
             } else {
@@ -314,8 +312,8 @@ export const App = {
     },
 
     toggleHidden(courseId, termId) {
-        if (State.activeGrid[courseId]?.[termId]) {
-            State.activeGrid[courseId][termId].hidden = !State.activeGrid[courseId][termId].hidden;
+        if (State.activeGrid[courseId]?.[termId] !== undefined) {
+            State.activeGrid[courseId][termId] = !State.activeGrid[courseId][termId];
             Storage.save();
             UI.refreshCell(courseId, termId);
             
@@ -330,8 +328,8 @@ export const App = {
         for (const [key, semantic] of Object.entries(highlights)) {
             if (semantic === 'errorTemp') {
                 const [targetCid, targetTid] = key.split('_');
-                if (State.activeGrid[targetCid] && State.activeGrid[targetCid][targetTid]) {
-                    State.activeGrid[targetCid][targetTid].hidden = true;
+                if (State.activeGrid[targetCid] && State.activeGrid[targetCid][targetTid] !== undefined) {
+                    State.activeGrid[targetCid][targetTid] = false;
                     hiddenCount++;
                 }
             }
@@ -339,7 +337,7 @@ export const App = {
 
         if (hiddenCount > 0) {
             Storage.save();
-            UI.renderBody();
+            UI.renderTable();
             UI.handleMouseOver(courseId, termId, true); 
         }
     },
@@ -372,6 +370,7 @@ export const App = {
         if (State.pinnedScheduleId) return; 
         State.hoveredScheduleId = id;
         UI.updateScheduleDisplay(); // Updates the "Previewing..." header
+        UI.renderHeaders();
         UI.renderBody();
     },
 
@@ -379,6 +378,7 @@ export const App = {
         if (State.pinnedScheduleId) return;
         State.hoveredScheduleId = null;
         UI.updateScheduleDisplay(); // Updates the "Previewing..." header
+        UI.renderHeaders();
         UI.renderBody();
     },
 
@@ -409,6 +409,60 @@ export const App = {
             UI.renderSidebarSchedules();
             UI.renderTable();
         });
+    },
+
+    async generateSchedule() {
+        console.log("Parsing active state and booting WASM Solver...");
+        
+        const maxTerms = parseInt(document.getElementById('gen-max-terms').value) || 6;
+        const maxResults = parseInt(document.getElementById('gen-max-results').value) || 5;
+        const maxTime = parseInt(document.getElementById('gen-max-time').value) || 5;
+
+        try {
+            const parsedData = parseCurriculumState(State);
+            const config = { minCredits: 7, maxCredits: 15, maxTerms, maxOptions: maxResults, maxTime };
+
+            const result = await generateOptimalSchedule(parsedData, config);
+
+            if (result.schedules.length > 0) {
+                let outputText = `Found ${result.schedules.length} Optimal Schedule(s) Tied for 1st Place (Score: ${result.score}) \n`;
+                outputText += "=".repeat(70) + "\n";
+
+                result.schedules.forEach((schedule, optionIdx) => {
+                    outputText += `\n--- OPTION ${optionIdx + 1} ---\n`;
+                    let totalDegreeCredits = 0;
+
+                    const sortedTermIndices = Object.keys(schedule).map(Number).sort((a, b) => a - b);
+                    
+                    sortedTermIndices.forEach(tIdx => {
+                        const tId = parsedData.termIds[tIdx];
+                        const termName = parsedData.termNames[tId];
+                        const termCourses = schedule[tIdx];
+                        
+                        let termCredits = 0;
+                        let courseListString = "";
+
+                        termCourses.forEach(c => {
+                            const cCredits = parsedData.courseCredits[c];
+                            termCredits += cCredits;
+                            courseListString += `    [${cCredits} cr] ${c}\n`;
+                        });
+
+                        totalDegreeCredits += termCredits;
+                        outputText += `  ${termName} (Term ${tIdx + 1}) - ${termCredits} credits:\n${courseListString}`;
+                    });
+
+                    outputText += "-".repeat(25) + "\n";
+                    outputText += `  Total Degree Credits: ${totalDegreeCredits}\n`;
+                });
+
+                console.log(outputText);
+            } else {
+                console.log(`INFEASIBLE \n\nThe solver could not fit the degree requirements into ${config.maxTerms} terms. Status code: ${result.status}`);
+            }
+        } catch (error) {
+            console.error("Solver Error:", error);
+        }
     },
 };
 

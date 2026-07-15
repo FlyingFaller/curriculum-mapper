@@ -1,5 +1,6 @@
 import { State } from './state.js';
 import { UI } from './ui.js';
+import * as XLSX from 'xlsx';
 
 export const Storage = {
     save() {
@@ -134,12 +135,7 @@ export const Storage = {
     },
 
     _exportSpreadsheet(format, config) {
-        if (!window.XLSX) {
-            return alert("Spreadsheet library is still loading. Please try again in a moment.");
-        }
-
         const activeGrid = State.schedules[State.activeScheduleId]?.grid || {};
-
         let exportRows = [];
 
         const getTagNames = (tagIds) => {
@@ -155,10 +151,10 @@ export const Storage = {
             
             sortedCourseIds.forEach(cId => {
                 const course = State.courses[cId];
-                const cell = activeGrid[cId]?.[term.id];
+                const isVisible = activeGrid[cId]?.[term.id];
 
-                if (cell && cell.active) {
-                    if (config.ignoreHidden && cell.hidden) return; 
+                if (isVisible !== undefined) {
+                    if (config.ignoreHidden && !isVisible) return; 
 
                     let row = {
                         "Term": term.name,
@@ -187,10 +183,7 @@ export const Storage = {
                 const course = State.courses[cId];
                 const sched = activeGrid[cId];
                 
-                let isScheduled = false;
-                if (sched) {
-                    isScheduled = Object.values(sched).some(cell => cell.active);
-                }
+                let isScheduled = sched && Object.keys(sched).length > 0;
 
                 if (!isScheduled) {
                     let row = {

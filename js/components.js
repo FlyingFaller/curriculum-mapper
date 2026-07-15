@@ -124,9 +124,9 @@ export const Components = {
             let visibleHTML = '', hiddenHTML = '';
             sortedCourses.forEach(course => {
                 if (course.id === State.selectedCourseId) return; 
-                const cellData = State.displayedGrid[course.id]?.[term.id];
-                if (cellData?.active) {
-                    if (cellData.hidden) hiddenHTML += this.generateCourseCardHTML(course, term, true, false);
+                const isVisible = State.displayedGrid[course.id]?.[term.id];
+                if (isVisible !== undefined) {
+                    if (!isVisible) hiddenHTML += this.generateCourseCardHTML(course, term, true, false);
                     else visibleHTML += this.generateCourseCardHTML(course, term, false, false);
                 }
             });
@@ -155,10 +155,10 @@ export const Components = {
                 </td>`;
             
             State.terms.forEach(term => {
-                const cellData = State.displayedGrid[activeCourse.id]?.[term.id];
+                const isVisible = State.displayedGrid[activeCourse.id]?.[term.id];
                 html += `<td class="cell-size align-top border-r border-border p-2">`;
-                if (cellData?.active) {
-                    html += this.generateCourseCardHTML(activeCourse, term, cellData.hidden, false);
+                if (isVisible !== undefined) {
+                    html += this.generateCourseCardHTML(activeCourse, term, !isVisible, false);
                 } else {
                     html += `
                         <div class="edit-target-zone" data-action="toggle-cell" data-cid="${activeCourse.id}" data-tid="${term.id}">
@@ -199,11 +199,11 @@ export const Components = {
                 </td>`;
 
             State.terms.forEach(term => {
-                const cellData = State.displayedGrid[course.id]?.[term.id];
+                const isVisible = State.displayedGrid[course.id]?.[term.id];
                 html += `<td class="cell-size course-cell-height p-0 align-top border-r border-b border-border bg-surface relative z-0" 
                              data-action="toggle-cell" data-cid="${course.id}" data-tid="${term.id}"
                              data-cell-cid="${course.id}" data-cell-tid="${term.id}">`;
-                if (cellData?.active) html += this.generateCourseCardHTML(course, term, cellData.hidden, false);
+                if (isVisible !== undefined) html += this.generateCourseCardHTML(course, term, !isVisible, false);
                 html += `</td>`;
             });
             html += `</tr>`;
@@ -247,7 +247,7 @@ export const Components = {
     generateCourseCardHTML(course, term, isHidden, isBankCard = false) {
         let instanceCount = 0;
         if (State.displayedGrid[course.id]) {
-            instanceCount = Object.values(State.displayedGrid[course.id]).filter(cell => cell.active).length;
+            instanceCount = Object.keys(State.displayedGrid[course.id]).length;
         }
 
         const isSingleton = instanceCount === 1;

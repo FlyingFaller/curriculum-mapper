@@ -5,8 +5,8 @@ export const HoverEngine = {
         const displayedGrid = State.displayedGrid;
         if(!displayedGrid[courseId]) return [];
         let indices = [];
-        for (const [termId, data] of Object.entries(displayedGrid[courseId])) {
-            if (data.active && !data.hidden) {
+        for (const [termId, isVisible] of Object.entries(displayedGrid[courseId])) {
+            if (isVisible === true) {
                 const idx = State.terms.findIndex(t => t.id === termId);
                 if (idx !== -1) indices.push(idx);
             }

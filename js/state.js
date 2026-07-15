@@ -38,7 +38,7 @@ export const State = {
         
         for (const cId in grid) {
             for (const tId in grid[cId]) {
-                if (grid[cId][tId] && grid[cId][tId].active && !grid[cId][tId].hidden) {
+                if (grid[cId][tId] === true) {
                     if (!assignments[tId]) assignments[tId] = [];
                     assignments[tId].push(cId);
                 }
@@ -133,7 +133,6 @@ export const State = {
         this.whitelist = parsed.whitelist || [];
         this.tags = parsed.tags || [];
 
-        // Support new schema or migrate legacy schema
         if (parsed.schedules && parsed.activeScheduleId) {
             this.schedules = parsed.schedules;
             this.activeScheduleId = parsed.activeScheduleId;
@@ -147,5 +146,21 @@ export const State = {
                 }
             };
         }
+
+        // Legacy Grid Migration
+        Object.values(this.schedules).forEach(sched => {
+            for (const cId in sched.grid) {
+                for (const tId in sched.grid[cId]) {
+                    const cell = sched.grid[cId][tId];
+                    if (typeof cell === 'object') {
+                        if (cell.active) {
+                            sched.grid[cId][tId] = !cell.hidden;
+                        } else {
+                            delete sched.grid[cId][tId];
+                        }
+                    }
+                }
+            }
+        });
     }
 };

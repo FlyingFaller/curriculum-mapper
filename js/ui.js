@@ -164,10 +164,14 @@ export const UI = {
         }
     },
 
-    renderTable() {
-        this.updateScheduleDisplay(); // Call it here
-        this.elements.scheduleTable.classList.toggle('compact-table', State.compactMode);
+    renderHeaders() {
         this.elements.tableHead.innerHTML = Components.buildHeaders();
+    },
+    
+    renderTable() {
+        this.updateScheduleDisplay();
+        this.elements.scheduleTable.classList.toggle('compact-table', State.compactMode);
+        this.renderHeaders(); 
         this.renderBody();
 
         if (State.pinnedNode) this.handleMouseOver(State.pinnedNode.cId, State.pinnedNode.tId, true);
@@ -191,22 +195,28 @@ export const UI = {
     },
 
     // Efficiently repaints just a targeted node 
-    refreshCell(cId, tId) {
+   refreshCell(cId, tId) {
+        const course = State.courses[cId];
+        const hasCredits = course && (course.credits || 0) > 0;
+
         if (State.compactMode) {
             this.renderBody();
         } else {
             const td = document.querySelector(`td[data-cell-cid="${cId}"][data-cell-tid="${tId}"]`);
             if (td) {
-                const cellData = State.displayedGrid[cId]?.[tId];
-                if (cellData?.active) {
-                    const course = State.courses[cId];
+                const isVisible = State.displayedGrid[cId]?.[tId];
+                if (isVisible !== undefined) {
                     const term = State.terms.find(t => t.id === tId);
-                    td.innerHTML = Components.generateCourseCardHTML(course, term, cellData.hidden, false);
+                    td.innerHTML = Components.generateCourseCardHTML(course, term, !isVisible, false);
                 } else {
                     td.innerHTML = '';
                 }
             }
-            this.elements.tableHead.innerHTML = Components.buildHeaders(); // Update headers (credits counts)
+        }
+        
+        // Only repaint the header DOM if credit counts actually changed
+        if (hasCredits) {
+            this.renderHeaders();
         }
     },
 
@@ -390,7 +400,7 @@ export const UI = {
         const hasConstraints = !!tag.constraints;
         this.elements.tagEditEnableConstraints.checked = hasConstraints;
         
-        this.elements.tagEditReqType.value = constraints.type || 'mandatory';
+        this.elements.tagEditReqType.value = constraints.type || 'mandatory-all';
         this.elements.tagEditMetric.value = constraints.metric || 'courses';
         this.elements.tagEditMin.value = constraints.min !== undefined ? constraints.min : 1;
         this.elements.tagEditMax.value = constraints.max !== undefined ? constraints.max : '';
@@ -407,8 +417,44 @@ export const UI = {
     toggleTagConstraints() {
         const isEnabled = this.elements.tagEditEnableConstraints.checked;
         const reqType = this.elements.tagEditReqType.value;
-        this.elements.tagConstraintsContainer.classList.toggle('hidden', !isEnabled);
-        this.elements.tagWeightContainer.classList.toggle('hidden', !isEnabled || reqType !== 'optional');
+        
+        // 1. Top-Level Enable/Disable
+        const constraintsContainer = this.elements.tagConstraintsContainer;
+        constraintsContainer.classList.toggle('opacity-60', !isEnabled);
+        this.elements.tagEditReqType.disabled = !isEnabled;
+
+        // 2. Compute states for sub-fields
+        const enableMetric = isEnabled && reqType === 'mandatory-custom';
+        const enableMinMax = isEnabled && reqType === 'mandatory-custom';
+        const enableWeight = isEnabled && reqType === 'optional';
+
+        // 3. Grab elements
+        const metricContainer = document.getElementById('tag-metric-container');
+        const metricInput = document.getElementById('tag-edit-metric');
+        
+        const minmaxContainer = document.getElementById('tag-minmax-container');
+        const minInput = document.getElementById('tag-edit-min');
+        const maxInput = document.getElementById('tag-edit-max');
+        
+        const weightContainer = document.getElementById('tag-weight-container');
+        const weightInput = document.getElementById('tag-edit-weight');
+
+        // 4. Apply gray-out classes and disable states
+        if (metricContainer && metricInput) {
+            metricContainer.classList.toggle('opacity-40', !enableMetric);
+            metricInput.disabled = !enableMetric;
+        }
+
+        if (minmaxContainer && minInput && maxInput) {
+            minmaxContainer.classList.toggle('opacity-40', !enableMinMax);
+            minInput.disabled = !enableMinMax;
+            maxInput.disabled = !enableMinMax;
+        }
+
+        if (weightContainer && weightInput) {
+            weightContainer.classList.toggle('opacity-40', !enableWeight);
+            weightInput.disabled = !enableWeight;
+        }
     },
 
     closeTagEditor() {
