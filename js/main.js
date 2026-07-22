@@ -57,20 +57,22 @@ export const App = {
         UI.renderTable();
     },
 
-    showAllHidden() {
+    showAllHidden(bypass = false) {
         if (State.isPreviewMode) return;
-        UI.showConfirm("Unhide All", "Are you sure you want to make all hidden course cards visible?", () => {
+        const execute = () => {
             Object.values(State.activeGrid).forEach(termMap => {
                 Object.keys(termMap).forEach(tId => termMap[tId] = true);
             });
             Storage.save();
             UI.renderTable();
-        });
+        };
+        if (bypass) execute();
+        else UI.showConfirm("Unhide All", "Are you sure you want to make all hidden course cards visible?", execute);
     },
 
-    hideErrors() {
+    hideErrors(bypass = false) {
         if (State.isPreviewMode) return;
-        UI.showConfirm("Hide Errors", "This will automatically hide scheduled instances that have missing or incorrectly timed prerequisites. Proceed?", () => {
+        const execute = () => {
             let changed = true;
             let passLimit = 100; 
             let passes = 0;
@@ -98,18 +100,22 @@ export const App = {
             }
             Storage.save();
             UI.renderTable();
-        });
+        };
+        if (bypass) execute();
+        else UI.showConfirm("Hide Errors", "This will automatically hide scheduled instances that have missing or incorrectly timed prerequisites. Proceed?", execute);
     },
 
-    resetMap() {
+    resetMap(bypass = false) {
         if (State.isPreviewMode) return;
-        UI.showConfirm("Reset Map", "Are you sure you want to completely reset the schedule builder?", () => {
+        const execute = () => {
             localStorage.removeItem('curriculumMap');
             State.initDefault();
             Storage.save();
             UI.renderTable();
             UI.renderSidebarSchedules(); 
-        });
+        };
+        if (bypass) execute();
+        else UI.showConfirm("Reset Map", "Are you sure you want to completely reset the schedule builder?", execute);
     },
 
     saveWhitelist() {
@@ -153,8 +159,8 @@ export const App = {
         UI.renderTable();
     },
 
-    deleteCourse(courseId) {
-        UI.showConfirm("Delete Course", `Delete course ${courseId} completely?`, () => {
+    deleteCourse(courseId, bypass = false) {
+        const execute = () => {
             // Clear UI states if the course being deleted is currently active
             if (State.pinnedNode && State.pinnedNode.cId === courseId) this.clearPin();
             if (State.selectedCourseId === courseId) State.selectedCourseId = null;
@@ -162,7 +168,10 @@ export const App = {
             State.deleteCourse(courseId);
             Storage.save();
             UI.renderTable();
-        });
+        };
+
+        if (bypass) execute();
+        else UI.showConfirm("Delete Course", `Delete course ${courseId} completely?`, execute);
     },
 
     saveTerm() {
@@ -189,8 +198,8 @@ export const App = {
         UI.renderTable();
     },
 
-    deleteTerm(termId) {
-        UI.showConfirm("Delete Term", "Delete this term and all course assignments in it?", () => {
+    deleteTerm(termId, bypass = false) {
+        const execute = () => {
             State.terms = State.terms.filter(t => t.id !== termId);
             Object.values(State.schedules).forEach(sched => {
                 Object.keys(sched.grid).forEach(cId => {
@@ -199,7 +208,9 @@ export const App = {
             });
             Storage.save();
             UI.renderTable();
-        });
+        };
+        if (bypass) execute();
+        else UI.showConfirm("Delete Term", "Delete this term and all course assignments in it?", execute);
     },
 
     saveTag() {
@@ -244,15 +255,18 @@ export const App = {
         UI.renderBody(); 
     },
 
-    deleteTag(tagId) {
-        UI.showConfirm("Delete Tag", "Are you sure? This will remove the tag from all courses.", () => {
+    deleteTag(tagId, bypass = false) {
+        const execute = () => {
             State.tags = State.tags.filter(t => t.id !== tagId);
             Object.values(State.courses).forEach(c => c.tags = (c.tags || []).filter(t => t !== tagId));
             Storage.save();
             UI.renderGlobalTags();
             UI.renderCourseTagsForm();
             UI.renderTable();
-        });
+        };
+
+        if (bypass) execute();
+        else UI.showConfirm("Delete Tag", "Are you sure? This will remove the tag from all courses.", execute);
     },
 
     togglePin(courseId, termId) {
@@ -400,27 +414,31 @@ export const App = {
         }
     },
 
-    deleteSchedule(scheduleId) {
-        UI.showConfirm("Delete Schedule", "Are you sure you want to permanently delete this schedule?", () => {
+    deleteSchedule(scheduleId, bypass = false) {
+        const execute = () => {
             delete State.schedules[scheduleId];
             if (State.pinnedScheduleId === scheduleId) State.pinnedScheduleId = null;
             if (State.hoveredScheduleId === scheduleId) State.hoveredScheduleId = null;
             Storage.save();
             UI.renderSidebarSchedules();
             UI.renderTable();
-        });
+        };
+        if (bypass) execute();
+        else UI.showConfirm("Delete Schedule", "Are you sure you want to permanently delete this schedule?", execute);
     },
 
     async generateSchedule() {
         console.log("Parsing active state and booting WASM Solver...");
-        
+
+        const minCredits = parseInt(document.getElementById('gen-min-credits').value) || 7;
+        const maxCredits = parseInt(document.getElementById('gen-max-credits').value) || 15;
         const maxTerms = parseInt(document.getElementById('gen-max-terms').value) || 6;
         const maxResults = parseInt(document.getElementById('gen-max-results').value) || 5;
         const maxTime = parseInt(document.getElementById('gen-max-time').value) || 5;
 
         try {
             const parsedData = parseCurriculumState(State);
-            const config = { minCredits: 7, maxCredits: 15, maxTerms, maxOptions: maxResults, maxTime };
+            const config = { minCredits, maxCredits, maxTerms, maxOptions: maxResults, maxTime };
 
             const result = await generateOptimalSchedule(parsedData, config);
 

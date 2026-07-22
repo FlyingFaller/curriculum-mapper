@@ -17,14 +17,15 @@ export function setupEventListeners() {
         const tId = actionEl.getAttribute('data-tid');
         const target = actionEl.getAttribute('data-target');
         const value = actionEl.getAttribute('data-value');
+        const bypass = e.shiftKey || e.ctrlKey;
 
         switch(action) {
             case 'toggle-theme'       : ThemeConfig.toggle(); break;
             case 'toggle-compact'     : App.toggleCompactMode(); break;
             case 'toggle-breakdown'   : App.toggleBreakdown(); break;
-            case 'show-all-hidden'    : App.showAllHidden(); break;
-            case 'hide-errors'        : App.hideErrors(); break;
-            case 'reset-map'          : App.resetMap(); break;
+            case 'show-all-hidden'    : App.showAllHidden(bypass); break;
+            case 'hide-errors'        : App.hideErrors(bypass); break;
+            case 'reset-map'          : App.resetMap(bypass); break;
             case 'toggle-cell'        : App.toggleCell(cId, tId); break;
             case 'toggle-pin'         : App.togglePin(cId, tId); break;
             case 'select-course'      : App.selectCourse(cId); break;
@@ -35,17 +36,17 @@ export function setupEventListeners() {
             case 'close-confirm'      : UI.closeConfirm(); break;
             case 'open-term-modal'    : UI.openTermModal(); break;
             case 'edit-term'          : UI.editTerm(tId); break;
-            case 'delete-term'        : App.deleteTerm(tId); break;
+            case 'delete-term'        : App.deleteTerm(tId, bypass); break;
             case 'save-term'          : App.saveTerm(); break;
             case 'open-course-modal'  : UI.openCourseModal(); break;
             case 'edit-course'        : UI.editCourse(cId); break;
-            case 'delete-course'      : App.deleteCourse(cId); break;
+            case 'delete-course'      : App.deleteCourse(cId, bypass); break;
             case 'save-course'        : App.saveCourse(); break;
             case 'open-tag-manager'   : UI.openTagManager(); break;
             case 'open-tag-editor'    : UI.openTagEditor(cId); break;
             case 'close-tag-editor'   : UI.closeTagEditor(); break;
             case 'save-tag'           : App.saveTag(); break;
-            case 'delete-tag'         : App.deleteTag(cId); break;
+            case 'delete-tag'         : App.deleteTag(cId, bypass); break;
             case 'select-icon'        : UI.selectIcon(value); break;
             case 'open-whitelist'     : UI.openWhitelistModal(); break;
             case 'save-whitelist'     : App.saveWhitelist(); break;
@@ -54,7 +55,7 @@ export function setupEventListeners() {
             case 'toggle-sidebar'     : UI.toggleGeneratorSidebar(); break;
             case 'snapshot-schedule'  : App.snapshotSchedule(); break;
             case 'switch-schedule'    : App.switchSchedule(value); break;
-            case 'delete-schedule'    : App.deleteSchedule(value); break;
+            case 'delete-schedule'    : App.deleteSchedule(value, bypass); break;
             case 'toggle-pin-schedule': App.togglePinSchedule(value); break;
             case 'clear-color'        : UI.utils.setColoris(target, ''); break;
             case 'generate-schedule'  : App.generateSchedule(); break;
@@ -130,11 +131,44 @@ export function setupEventListeners() {
     // 4. Global Keyboard Overrides
     document.addEventListener('keydown', (e) => {
         if (e.key === 'Escape') {
-            if (State.pinnedNode) App.clearPin();
+            // 1. Confirm Modal (Highest priority, z-[60])
+            if (!UI.elements.confirmModal.classList.contains('hidden')) {
+                return UI.closeConfirm();
+            }
+            
+            // 2. Tag Editor Modal (Sub-modal of Tag Manager, z-[60])
+            if (!UI.elements.tagEditorModal.classList.contains('hidden')) {
+                return UI.closeTagEditor();
+            }
+            
+            // 3. Standard Base Modals (z-50)
+            const openBaseModal = [
+                UI.elements.termModal, 
+                UI.elements.courseModal, 
+                UI.elements.whitelistModal, 
+                UI.elements.tagManagerModal, 
+                UI.elements.exportModal
+            ].find(el => !el.classList.contains('hidden'));
+            
+            if (openBaseModal) {
+                openBaseModal.classList.add('hidden');
+                return;
+            }
+            
+            // 4. Generator Sidebar (z-[55])
+            if (!UI.elements.generatorSidebar.classList.contains('-translate-x-full')) {
+                return UI.toggleGeneratorSidebar();
+            }
+
+            // 5. Ephemeral UI states (Pins)
+            if (State.pinnedNode) {
+                return App.clearPin();
+            }
+            
             if (State.pinnedScheduleId) {
                 State.pinnedScheduleId = null;
                 UI.renderSidebarSchedules();
-                UI.renderTable();
+                return UI.renderTable();
             }
         }
     });
