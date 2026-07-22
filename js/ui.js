@@ -152,6 +152,12 @@ export const UI = {
             }
         }
 
+        const actionMenu = document.getElementById('active-schedule-action-menu');
+        if (actionMenu) {
+            const schedCount = Object.keys(State.schedules).length;
+            actionMenu.style.display = schedCount <= 1 ? 'none' : '';
+        }
+
         const isPreview = State.isPreviewMode;
         this.elements.activeScheduleName.classList.toggle('hidden', isPreview);
         

@@ -56,6 +56,7 @@ export function setupEventListeners() {
             case 'snapshot-schedule'  : App.snapshotSchedule(); break;
             case 'switch-schedule'    : App.switchSchedule(value); break;
             case 'delete-schedule'    : App.deleteSchedule(value, bypass); break;
+            case 'delete-active-schedule': App.deleteActiveSchedule(bypass); break;
             case 'toggle-pin-schedule': App.togglePinSchedule(value); break;
             case 'clear-color'        : UI.utils.setColoris(target, ''); break;
             case 'generate-schedule'  : App.generateSchedule(); break;
@@ -73,6 +74,13 @@ export function setupEventListeners() {
     const schedInput = document.getElementById('active-schedule-name');
     if (schedInput) {
         schedInput.addEventListener('input', (e) => App.updateScheduleName(e.target.value));
+        
+        schedInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault(); // Prevents form submission side-effects
+                e.target.blur();
+            }
+        });
     }
 
     const importInput = document.getElementById('importFile');

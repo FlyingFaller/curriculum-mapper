@@ -427,21 +427,27 @@
                     </button>
                 </div>
                 <div class="space-y-2 flex flex-col pt-1">
-                    <h4 class="text-micro font-bold text-text-muted uppercase tracking-wider">Active Schedule</h4>
-                    <div class="bg-surface border border-border rounded-md shadow-sm p-2 flex items-center">
-                        <span id="sidebar-active-name" class="text-sm text-text-main truncate text-left w-full"></span>
+                    <div class="flex justify-between items-center">
+                        <h4 class="text-micro font-bold text-text-muted uppercase tracking-wider">Active Schedule</h4>
+                        <button data-action="snapshot-schedule" class="text-text-muted hover:text-accent transition-colors" title="Duplicate Active Schedule">
+                            <i class="ph ph-copy text-sm"></i>
+                        </button>
+                    </div>
+                    <div class="bg-surface border border-border rounded-md shadow-sm p-2 flex items-center justify-between group relative">
+                        <span id="sidebar-active-name" class="text-sm text-text-main truncate text-left w-full pr-2"></span>
+                        <div id="active-schedule-action-menu" class="card-action-menu" style="top: 0.125rem; right: 0.125rem;">
+                            <button data-action="delete-active-schedule" class="btn-icon-danger" title="Delete Active Schedule">
+                                <i class="ph ph-trash text-base leading-none"></i>
+                            </button>
+                        </div>
                     </div>
                 </div>
             </div>
 
             <!-- Middle Flexible Block: Saved Schedules -->
-            <div class="flex flex-col shrink-0 max-h-[25vh] border-b border-border p-4">
-                <div class="flex justify-between items-center shrink-0 mb-2">
-                    <h4 class="text-micro font-bold text-text-muted uppercase tracking-wider">Saved Schedules</h4>
-                    <button data-action="snapshot-schedule" class="text-text-muted hover:text-accent transition-colors" title="Snapshot Current Schedule">
-                        <i class="ph ph-camera text-sm"></i>
-                    </button>
-                </div>
+            <div class="flex flex-col shrink-0 max-h-[45vh] border-b border-border p-4">
+                <!-- Button removed from here, just leaving the header -->
+                <h4 class="text-micro font-bold text-text-muted uppercase tracking-wider shrink-0 mb-2">Saved Schedules</h4>
                 <div id="saved-schedules-list" class="overflow-y-auto flex flex-col gap-2 pr-1"></div>
             </div>
 

@@ -376,8 +376,22 @@ export const App = {
         const gridCopy = JSON.parse(JSON.stringify(currentSched.grid));
 
         State.schedules[newId] = { name: newName, lastModified: Date.now(), grid: gridCopy };
+
+        // Set duplicate schedule to active immediately
+        State.activeScheduleId = newId;
+        State.pinnedScheduleId = null;
+        State.hoveredScheduleId = null;
+
         Storage.save();
+
         UI.renderSidebarSchedules();
+        UI.renderTable();
+
+        const nameInput = document.getElementById('active-schedule-name');
+        if (nameInput) {
+            nameInput.focus();
+            nameInput.select();
+        }
     },
 
     hoverSchedule(id) {
@@ -414,15 +428,35 @@ export const App = {
         }
     },
 
+    deleteActiveSchedule(bypass = false) {
+        this.deleteSchedule(State.activeScheduleId, bypass);
+    },
+
     deleteSchedule(scheduleId, bypass = false) {
         const execute = () => {
+            const schedIds = Object.keys(State.schedules);
+            
+            // Prevent deleting the very last schedule
+            if (schedIds.length <= 1) return; 
+
+            // Fallback logic if the active schedule is the one being deleted
+            if (State.activeScheduleId === scheduleId) {
+                const remainingIds = schedIds.filter(id => id !== scheduleId);
+                // Sort by lastModified descending (newest first)
+                remainingIds.sort((a, b) => State.schedules[b].lastModified - State.schedules[a].lastModified);
+                State.activeScheduleId = remainingIds[0];
+            }
+
             delete State.schedules[scheduleId];
             if (State.pinnedScheduleId === scheduleId) State.pinnedScheduleId = null;
             if (State.hoveredScheduleId === scheduleId) State.hoveredScheduleId = null;
+            
             Storage.save();
             UI.renderSidebarSchedules();
+            UI.updateScheduleDisplay(); // Ensure the active display updates
             UI.renderTable();
         };
+
         if (bypass) execute();
         else UI.showConfirm("Delete Schedule", "Are you sure you want to permanently delete this schedule?", execute);
     },
