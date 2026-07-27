@@ -6,6 +6,7 @@ import { UI } from './ui.js';
 import { setupEventListeners } from './events.js';
 import { parseCurriculumState } from './parser.js';
 import { generateOptimalSchedule } from './solver.js';
+import { processGeneratedSchedules } from './postprocessing.js';
 
 export const App = {
     init() {
@@ -467,8 +468,9 @@ export const App = {
         const minCredits = parseInt(document.getElementById('gen-min-credits').value) || 7;
         const maxCredits = parseInt(document.getElementById('gen-max-credits').value) || 15;
         const maxTerms = parseInt(document.getElementById('gen-max-terms').value) || 6;
-        const maxResults = parseInt(document.getElementById('gen-max-results').value) || 5;
-        const maxTime = parseInt(document.getElementById('gen-max-time').value) || 5;
+        const maxResults = parseInt(document.getElementById('gen-max-results').value) || Infinity;
+        const maxTime = parseInt(document.getElementById('gen-max-time').value) || Infinity;
+        console.log(minCredits, maxCredits, maxTerms, maxResults, maxTime);
 
         try {
             const parsedData = parseCurriculumState(State);
@@ -477,11 +479,24 @@ export const App = {
             const result = await generateOptimalSchedule(parsedData, config);
 
             if (result.schedules.length > 0) {
-                let outputText = `Found ${result.schedules.length} Optimal Schedule(s) Tied for 1st Place (Score: ${result.score}) \n`;
+                // Now returns { namedSchedules: [...], debug: {...} }
+                const processedData = processGeneratedSchedules(result.schedules);
+
+                // --- DEBUG CONSOLE LOGS ---
+                console.log("%c=== DEBUG: Global Course Rarity ===", "color: #3b82f6; font-weight: bold;");
+                console.table(processedData.debug.globalCourseFreq);
+                console.log("%c=== DEBUG: Family Groupings ===", "color: #10b981; font-weight: bold;");
+                console.table(processedData.debug.families);
+                // --------------------------
+
+                let outputText = `\nFound ${result.schedules.length} Optimal Schedule(s) Tied for 1st Place (Score: ${result.score}) \n`;
                 outputText += "=".repeat(70) + "\n";
 
-                result.schedules.forEach((schedule, optionIdx) => {
-                    outputText += `\n--- OPTION ${optionIdx + 1} ---\n`;
+                // Iterate over the sorted and named results
+                processedData.namedSchedules.forEach((item, optionIdx) => {
+                    // Inject Family ID and Name
+                    outputText += `\n--- [Family ${item.familyId}] ${item.name} ---\n`;
+                    const schedule = item.schedule;
                     let totalDegreeCredits = 0;
 
                     const sortedTermIndices = Object.keys(schedule).map(Number).sort((a, b) => a - b);

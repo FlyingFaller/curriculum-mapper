@@ -28,6 +28,8 @@ class TopScheduleCollector extends CpSolverSolutionCallback {
 }
 
 export async function generateOptimalSchedule(parsedData, config) {
+    const largeNumber = 100_000_000;
+
     const { minCredits = 1, maxCredits = 20, maxTerms = null, maxOptions = 5, maxTime = 5 } = config;
     const { allCourses: courses, availability, coursePrereqs: prereqs, whitelist, courseCredits: credits, tags, courseTags } = parsedData;
     const numTerms = maxTerms !== null ? Math.min(parsedData.numTerms, maxTerms) : parsedData.numTerms;
@@ -70,8 +72,8 @@ export async function generateOptimalSchedule(parsedData, config) {
             const termVars = courses.map(c => takes[c][t]);
             const termCoeffs = courses.map(c => credits[c]);
             
-            model.addLinearConstraint(LinearExpr.weightedSum([...termVars, isActiveTerm], [...termCoeffs, -minCredits]), 0, 1000000);
-            model.addLinearConstraint(LinearExpr.weightedSum([...termVars, isActiveTerm], [...termCoeffs, -maxCredits]), -1000000, 0);
+            model.addLinearConstraint(LinearExpr.weightedSum([...termVars, isActiveTerm], [...termCoeffs, -minCredits]), 0, largeNumber);
+            model.addLinearConstraint(LinearExpr.weightedSum([...termVars, isActiveTerm], [...termCoeffs, -maxCredits]), -largeNumber, 0);
         }
 
         // 3. Prerequisite Chains
@@ -112,7 +114,7 @@ export async function generateOptimalSchedule(parsedData, config) {
             else if (type === 'mandatory-custom') {
                 const lowerBound = min !== undefined && min !== '' ? parseInt(min) : 0;
                 const parsedMax = parseInt(max);
-                const upperBound = isNaN(parsedMax) ? 1000000 : parsedMax;
+                const upperBound = isNaN(parsedMax) ? largeNumber : parsedMax;
                 model.addLinearConstraint(LinearExpr.weightedSum(vars, coeffMapping), lowerBound, upperBound);
             } 
             else if (type === 'optional') {

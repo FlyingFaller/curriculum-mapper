@@ -24,7 +24,7 @@ export function parseCurriculumState(state) {
         const termData = state.activeGrid[cId];
         if (termData) {
             termIds.forEach((tId, tIdx) => {
-                if (termData[tId] !== undefined) {
+                if (termData[tId] === true) {
                     availability[cId].push(tIdx);
                 }
             });
