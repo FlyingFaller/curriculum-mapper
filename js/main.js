@@ -480,7 +480,7 @@ export const App = {
 
             if (result.schedules.length > 0) {
                 // Now returns { namedSchedules: [...], debug: {...} }
-                const processedData = processGeneratedSchedules(result.schedules, parsedData.courseCredits);
+                const processedData = processGeneratedSchedules(result.schedules, parsedData);
 
                 // --- DEBUG CONSOLE LOGS ---
                 console.log("%c=== DEBUG: Global Course Rarity ===", "color: #3b82f6; font-weight: bold;");

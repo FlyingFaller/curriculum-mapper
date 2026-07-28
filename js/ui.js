@@ -261,7 +261,7 @@ export const UI = {
             html += `
             <div class="schedule-item border ${activeClass} rounded-md shadow-sm p-2 flex items-center group relative cursor-pointer transition-colors duration-200"
                  data-sid="${id}" data-action="toggle-pin-schedule" data-value="${id}">
-                <span class="text-sm font-medium ${textClass} transition-colors truncate text-left w-full pr-14" title="${sched.name}">${sched.name}</span>
+                <span class="text-sm font-medium ${textClass} transition-colors truncate text-left w-full" title="${sched.name}">${sched.name}</span>
                 <div class="card-action-menu" style="top: 0.125rem; right: 0.125rem;">
                     <button data-action="switch-schedule" data-value="${id}" class="btn-icon" title="Make Active"><i class="ph ph-arrow-right text-base leading-none"></i></button>
                     <button data-action="delete-schedule" data-value="${id}" class="btn-icon-danger" title="Delete Schedule"><i class="ph ph-trash text-base leading-none"></i></button>

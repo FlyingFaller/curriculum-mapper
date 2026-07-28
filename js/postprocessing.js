@@ -1,129 +1,166 @@
 /**
- * Processes generated schedules into unique, descriptive names using 
- * a Minimum Hitting Set architecture, calculating Total Credits dynamically.
+ * Processes generated schedules into unique, descriptive names using a prioritized
+ * constraint and rarity pipeline, calculating Total Credits dynamically.
  */
-export function processGeneratedSchedules(schedules, courseCredits = {}) {
+export function processGeneratedSchedules(schedules, parsedData) {
     const total = schedules.length;
-    
-    console.group(`\n🚀 [Schedule Naming] Processing ${total} Schedules (Hitting Set + Dynamic Credits)`);
+    const MAX_COURSES_IN_NAME = 3; // Configurable: 2 or 3 courses per name
+    const INCLUDE_TERMS = false; // Configurable: Append (T#) to course names
 
+    console.group(`\n  [Schedule Naming] Processing ${total} Schedules (Priority + Rarity)`);
     if (total === 0) {
         console.groupEnd();
-        return { namedSchedules: [], debug: {} }; 
-    }
-    if (total === 1) {
-        console.groupEnd();
-        return { namedSchedules: [{ schedule: schedules[0], name: "Optimal Schedule", familyId: 1 }], debug: {} }; 
+        return { namedSchedules: [], debug: {} };
     }
 
-    const tupleFreq = {}; 
-    
-    // --- Phase 1: Robust Tuple Extraction & Dynamic Credit Calculation ---
-    const parsedData = schedules.map((sched, idx) => {
-        const tuples = new Set();
+    // --- Phase 1: Extract Instances and Credits ---
+    const parsedSchedules = schedules.map((sched, idx) => {
         let totalCredits = 0;
-        
+        const instances = [];
+        const termCredits = {};
+
         Object.entries(sched).forEach(([key, val]) => {
+            const tIdx = parseInt(key);
+            const tNum = tIdx + 1; // 1-based indexing for UI output (e.g., T1, T2)
+            let tCreds = 0;
+
             if (Array.isArray(val)) {
-                const tNum = parseInt(key) + 1; 
-                val.forEach(c => {
-                    tuples.add(`${c}_T${tNum}`);
-                    // Dynamically calculate credits using the injected dictionary
-                    totalCredits += (courseCredits[c] || 0); 
+                val.forEach(cId => {
+                    const credits = parsedData.courseCredits[cId] || 0;
+                    totalCredits += credits;
+                    tCreds += credits;
+                    instances.push({ cId, tIdx, tNum, credits });
                 });
             }
+            termCredits[tNum] = tCreds;
         });
 
-        if (totalCredits > 0) {
-            tuples.add(`Credits_${totalCredits}`);
-        }
-        
-        const tupleArray = Array.from(tuples);
-        tupleArray.forEach(t => tupleFreq[t] = (tupleFreq[t] || 0) + 1);
-        return { sched, idx, tuples: tupleArray };
+        return { sched, idx, totalCredits, instances, termCredits };
     });
 
-    const candidateTuples = new Set(
-        Object.keys(tupleFreq).filter(t => tupleFreq[t] > 0 && tupleFreq[t] < total)
-    );
+    const formatCourse = (inst) => INCLUDE_TERMS ? `${inst.cId} (T${inst.tNum})` : inst.cId;
 
-    // --- Phase 2: Rapid Symmetric Differences ---
-    let unresolvedPairs = [];
-    
-    for (let i = 0; i < total; i++) {
-        const tuplesA = new Set(parsedData[i].tuples);
-        
-        for (let j = i + 1; j < total; j++) {
-            const diff = [];
-            const tuplesB = new Set(parsedData[j].tuples);
-            
-            tuplesA.forEach(t => { if (!tuplesB.has(t) && candidateTuples.has(t)) diff.push(t); });
-            tuplesB.forEach(t => { if (!tuplesA.has(t) && candidateTuples.has(t)) diff.push(t); });
-            
-            if (diff.length > 0) unresolvedPairs.push(diff);
-        }
+    if (total === 1) {
+        const s = parsedSchedules[0];
+        const selected = s.instances.slice(0, MAX_COURSES_IN_NAME).map(formatCourse);
+        const name = `${s.totalCredits}cr: ` + (selected.length > 0 ? selected.join(' ') : 'Core Schedule');
+        console.groupEnd();
+        return { namedSchedules: [{ schedule: s.sched, name, familyId: 1 }], debug: {} };
     }
 
-    // --- Phase 3: Greedy Hitting Set Algorithm ---
-    const hittingSet = [];
-    
-    while (unresolvedPairs.length > 0) {
-        const coverage = new Map();
-        
-        unresolvedPairs.forEach(diff => {
-            diff.forEach(t => coverage.set(t, (coverage.get(t) || 0) + 1));
+    // --- Phase 2: Calculate Global Frequencies for Rarity ---
+    const freq = {};
+    parsedSchedules.forEach(s => {
+        s.instances.forEach(inst => {
+            const key = `${inst.cId}_T${inst.tNum}`;
+            freq[key] = (freq[key] || 0) + 1;
         });
+    });
 
-        let bestTuple = null;
-        let maxCover = 0;
-        
-        for (const [t, count] of coverage.entries()) {
-            if (count > maxCover) {
-                maxCover = count;
-                bestTuple = t;
+    // --- Phase 3: Tag Categorization ---
+    const courseCat = {};
+    parsedData.allCourses.forEach(cId => {
+        let isOptional = false;
+        let maxWeight = 0;
+        let isRequireSome = false;
+
+        const cTags = parsedData.courseTags[cId] || [];
+        cTags.forEach(tId => {
+            const tag = parsedData.tags.find(t => t.id === tId);
+            if (tag && tag.constraints) {
+                if (tag.constraints.type === 'optional') {
+                    isOptional = true;
+                    maxWeight = Math.max(maxWeight, parseInt(tag.constraints.weight) || 5);
+                } else if (tag.constraints.type === 'mandatory-custom') {
+                    isRequireSome = true;
+                }
+            }
+        });
+        courseCat[cId] = { isOptional, maxWeight, isRequireSome };
+    });
+
+    // --- Phase 4: Step 5 Trigger Check ---
+    let needsStep5 = false;
+    const allFrequencies = Object.values(freq);
+    
+    // Check 1: Are all courses equally rare? (Frequencies are identical)
+    const isEquallyRare = allFrequencies.length > 0 && allFrequencies.every(f => f === allFrequencies[0]);
+    
+    if (isEquallyRare) {
+        needsStep5 = true;
+    } else {
+        // Check 2: Does any schedule lack rare courses entirely? (e.g., subset of another schedule)
+        for (const s of parsedSchedules) {
+            const minFrequency = Math.min(...s.instances.map(inst => freq[`${inst.cId}_T${inst.tNum}`]));
+            if (minFrequency === total) {
+                needsStep5 = true;
+                break;
             }
         }
-
-        if (!bestTuple) break; 
-
-        hittingSet.push(bestTuple);
-        unresolvedPairs = unresolvedPairs.filter(diff => !diff.includes(bestTuple));
     }
 
-    console.log(`🎯 Minimal Hitting Set (Master Pool):`, hittingSet);
-    console.log(`📏 Length of Hitting Set: ${hittingSet.length}`);
-
-    // --- Phase 4: Output Generation ---
+    // --- Phase 5: Name Generation ---
     const namedSchedules = [];
     const debugFamilies = {};
 
-    parsedData.forEach(member => {
-        const identityTuples = member.tuples
-            .filter(t => hittingSet.includes(t))
-            .sort((a, b) => {
-                if (a.startsWith('Credits_')) return 1;
-                if (b.startsWith('Credits_')) return -1;
-                return a.localeCompare(b);
-            });
-            
-        const formattedTuples = identityTuples.map(t => 
-            t.startsWith('Credits_') ? `${t.split('_')[1]}cr` : t
-        );
+    parsedSchedules.forEach(s => {
+        let nameSuffix = '';
 
-        let finalName = formattedTuples.length > 0 ? formattedTuples.join(" + ") : "Core Schedule";
-        const fId = member.idx + 1;
+        if (needsStep5) {
+            // Step 5: Fallback to Credits per Term
+            const termStrings = [];
+            const sortedTerms = Object.keys(s.termCredits).map(Number).sort((a, b) => a - b);
+            
+            sortedTerms.forEach(tNum => {
+                if (s.termCredits[tNum] > 0) {
+                    termStrings.push(`${s.termCredits[tNum]}cr (T${tNum})`);
+                }
+            });
+            nameSuffix = termStrings.join(', ');
+            
+        } else {
+            // Steps 2, 3, and 4: Rank courses
+            const ranked = [...s.instances].sort((a, b) => {
+                const keyA = `${a.cId}_T${a.tNum}`;
+                const keyB = `${b.cId}_T${b.tNum}`;
+                const catA = courseCat[a.cId];
+                const catB = courseCat[b.cId];
+                const rarityA = freq[keyA];
+                const rarityB = freq[keyB];
+
+                // Priority 1: Optional Constraint
+                if (catA.isOptional !== catB.isOptional) return catB.isOptional - catA.isOptional;
+                if (catA.isOptional) {
+                    if (rarityA !== rarityB) return rarityA - rarityB;                 // Sub-priority A: Rarity (asc)
+                    if (catA.maxWeight !== catB.maxWeight) return catB.maxWeight - catA.maxWeight; // Sub-priority B: Weight (desc)
+                }
+
+                // Priority 2: Require Some Constraint
+                if (catA.isRequireSome !== catB.isRequireSome) return catB.isRequireSome - catA.isRequireSome;
+                
+                // Priority 3: General Rarity
+                if (rarityA !== rarityB) return rarityA - rarityB;
+
+                // Priority 4: Tie-breaker (Alphabetical ID)
+                return a.cId.localeCompare(b.cId);
+            });
+
+            const selected = ranked.slice(0, MAX_COURSES_IN_NAME).map(formatCourse);
+            nameSuffix = selected.join(' ');
+        }
+
+        const finalName = `${s.totalCredits}cr: ` + (nameSuffix || 'Core Schedule');
+        const fId = s.idx + 1;
         
-        namedSchedules.push({ schedule: member.sched, name: finalName, familyId: fId });
+        namedSchedules.push({ schedule: s.sched, name: finalName, familyId: fId });
         debugFamilies[`Sched ${fId}`] = finalName;
     });
 
+    console.log(needsStep5 ? `  Triggered Step 5 Fallback (Credits per Term)` : `  Generated names via Rarity Pipeline`);
     console.groupEnd();
-
-    return { 
-        namedSchedules, 
-        debug: { 
-            tupleFreq, 
-            families: debugFamilies 
-        } 
-    }; 
+    
+    return {
+        namedSchedules,
+        debug: { freq, courseCat, needsStep5, families: debugFamilies }
+    };
 }
