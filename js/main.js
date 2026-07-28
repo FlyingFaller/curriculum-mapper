@@ -415,18 +415,33 @@ export const App = {
         State.pinnedScheduleId = (State.pinnedScheduleId === id) ? null : id;
         State.hoveredScheduleId = null; 
         UI.renderSidebarSchedules();
+        if (UI.renderGeneratedSchedules) UI.renderGeneratedSchedules();
         UI.renderTable();
     },
 
     switchSchedule(scheduleId) {
+        const targetSched = State.getSchedule(scheduleId);
+        if (!targetSched) return;
+
         if (State.schedules[scheduleId]) {
             State.activeScheduleId = scheduleId;
-            State.pinnedScheduleId = null;
-            State.hoveredScheduleId = null;
-            Storage.save();
-            UI.renderSidebarSchedules();
-            UI.renderTable(); 
+        } else {
+            // Adopt generated schedule as a persistent saved schedule
+            const newId = 'sched-' + Date.now();
+            State.schedules[newId] = {
+                name: targetSched.name,
+                lastModified: Date.now(),
+                grid: JSON.parse(JSON.stringify(targetSched.grid))
+            };
+            State.activeScheduleId = newId;
         }
+        
+        State.pinnedScheduleId = null;
+        State.hoveredScheduleId = null;
+        Storage.save();
+        UI.renderSidebarSchedules();
+        if (UI.renderGeneratedSchedules) UI.renderGeneratedSchedules();
+        UI.renderTable(); 
     },
 
     deleteActiveSchedule(bypass = false) {
@@ -434,6 +449,16 @@ export const App = {
     },
 
     deleteSchedule(scheduleId, bypass = false) {
+        if (State.generatedSchedules && State.generatedSchedules[scheduleId]) {
+            delete State.generatedSchedules[scheduleId];
+            if (State.pinnedScheduleId === scheduleId) State.pinnedScheduleId = null;
+            if (State.hoveredScheduleId === scheduleId) State.hoveredScheduleId = null;
+            if (UI.renderGeneratedSchedules) UI.renderGeneratedSchedules();
+            UI.updateScheduleDisplay();
+            UI.renderTable();
+            return;
+        }
+
         const execute = () => {
             const schedIds = Object.keys(State.schedules);
             
@@ -492,13 +517,14 @@ export const App = {
                 let outputText = `\nFound ${result.schedules.length} Optimal Schedule(s) Tied for 1st Place (Score: ${result.score}) \n`;
                 outputText += "=".repeat(70) + "\n";
 
+                State.generatedSchedules = {};
+
                 // Iterate over the sorted and named results
                 processedData.namedSchedules.forEach((item, optionIdx) => {
-                    // Inject Family ID and Name
+                    // Inject Family ID and Name to Console
                     outputText += `\n--- [Family ${item.familyId}] ${item.name} ---\n`;
                     const schedule = item.schedule;
                     let totalDegreeCredits = 0;
-
                     const sortedTermIndices = Object.keys(schedule).map(Number).sort((a, b) => a - b);
                     
                     sortedTermIndices.forEach(tIdx => {
@@ -508,22 +534,37 @@ export const App = {
                         
                         let termCredits = 0;
                         let courseListString = "";
-
                         termCourses.forEach(c => {
                             const cCredits = parsedData.courseCredits[c];
                             termCredits += cCredits;
                             courseListString += `    [${cCredits} cr] ${c}\n`;
                         });
-
                         totalDegreeCredits += termCredits;
                         outputText += `  ${termName} (Term ${tIdx + 1}) - ${termCredits} credits:\n${courseListString}`;
                     });
-
                     outputText += "-".repeat(25) + "\n";
                     outputText += `  Total Degree Credits: ${totalDegreeCredits}\n`;
-                });
 
+                    // Push Formatted UI Grids to App State
+                    const genId = 'gen-sched-' + Date.now() + '-' + optionIdx;
+                    const uiGrid = {};
+                    
+                    Object.entries(schedule).forEach(([tIdx, cIds]) => {
+                        const termId = parsedData.termIds[parseInt(tIdx)];
+                        cIds.forEach(cId => {
+                            if (!uiGrid[cId]) uiGrid[cId] = {};
+                            uiGrid[cId][termId] = true;
+                        });
+                    });
+
+                    State.generatedSchedules[genId] = {
+                        name: item.name,
+                        grid: uiGrid
+                    };
+                });
+                
                 console.log(outputText);
+                if (UI.renderGeneratedSchedules) UI.renderGeneratedSchedules();
             } else {
                 console.log(`INFEASIBLE \n\nThe solver could not fit the degree requirements into ${config.maxTerms} terms. Status code: ${result.status}`);
             }

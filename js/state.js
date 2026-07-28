@@ -5,27 +5,43 @@ export const State = {
     tags: [],
     
     schedules: {},
+    generatedSchedules: {},
     activeScheduleId: null,
     
-    // The grid strictly tied to editing
+    // Global schedule lookup
+    getSchedule(id) {
+        if (!id) return null;
+        return this.schedules[id] || (this.generatedSchedules && this.generatedSchedules[id]) || null;
+    },
+
+    // Gets schedule being editted
+    get activeSchedule() {
+        return this.schedules[this.activeScheduleId] || null;
+    },
+
+    // Gets schedule being displayed 
+    get displayedSchedule() {
+        return this.getSchedule(this.displayedScheduleId);
+    },
+
+    // Gets grid for the schedule being editted
     get activeGrid() {
-        if (!this.activeScheduleId || !this.schedules[this.activeScheduleId]) return {};
-        return this.schedules[this.activeScheduleId].grid;
+        const sched = this.activeSchedule;
+        return sched ? sched.grid : {};
     },
     
-    // The schedule ID we should visually render
+    // Gets ID for currently displayed schedule
     get displayedScheduleId() {
         return this.pinnedScheduleId || this.hoveredScheduleId || this.activeScheduleId;
     },
     
-    // The grid we should visually render
+    // Gets grid for schedule being displayed
     get displayedGrid() {
-        const id = this.displayedScheduleId;
-        if (!id || !this.schedules[id]) return {};
-        return this.schedules[id].grid;
+        const sched = this.displayedSchedule;
+        return sched ? sched.grid : {};
     },
     
-    // Boolean check to disable editing interfaces
+    // Bool to indicate if displayed grid is a preview or the active
     get isPreviewMode() {
         return this.displayedScheduleId !== this.activeScheduleId;
     },
@@ -67,6 +83,7 @@ export const State = {
         this.courses = {};
         this.whitelist = [];
         this.tags = [];
+        this.generatedSchedules = {};
         
         // Initialize Default Schedule
         this.activeScheduleId = 'sched-' + Date.now();

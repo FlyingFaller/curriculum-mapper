@@ -164,8 +164,8 @@ export const UI = {
         if (this.elements.previewScheduleName) {
             this.elements.previewScheduleName.classList.toggle('hidden', !isPreview);
             if (isPreview) {
-                const displayedSched = State.schedules[State.displayedScheduleId];
-                this.elements.previewScheduleText.innerText = displayedSched.name;
+                const displayedSched = State.displayedSchedule;
+                if (displayedSched) this.elements.previewScheduleText.innerText = displayedSched.name;
             }
         }
     },
@@ -270,6 +270,57 @@ export const UI = {
         });
         
         this.elements.savedSchedulesList.innerHTML = html;
+    },
+
+    renderGeneratedSchedules() {
+        const container = this.elements.generatorResultsList;
+        if (!container) return;
+        
+        const schedIds = Object.keys(State.generatedSchedules || {});
+        const anyPinned = !!State.pinnedScheduleId;
+        
+        if (schedIds.length === 0) {
+            container.innerHTML = `
+                <div class="text-caption text-text-muted italic p-3 text-center border border-dashed border-border rounded bg-canvas">
+                    No results.
+                </div>`;
+            return;
+        }
+        
+        let html = '';
+        schedIds.forEach(id => {
+            const sched = State.generatedSchedules[id];
+            const isPinned = State.pinnedScheduleId === id;
+            
+            let activeClass = '';
+            let textClass = '';
+            if (isPinned) {
+                activeClass = 'selected-card bg-[var(--color-hover)] shadow-md';
+                textClass = 'text-white';
+            } else if (anyPinned) {
+                activeClass = 'border-border bg-surface hover:bg-surface-hover hover:border-border-focus';
+                textClass = 'text-text-main group-hover:text-text-main';
+            } else {
+                activeClass = 'border-border bg-surface hover:bg-[var(--color-hover)] hover:border-[var(--color-hover)]';
+                textClass = 'text-text-main group-hover:text-white';
+            }
+            
+            html += `
+            <div class="schedule-item border ${activeClass} rounded-md shadow-sm p-2 flex items-center group relative cursor-pointer transition-colors duration-200"
+                 data-sid="${id}" data-action="toggle-pin-schedule" data-value="${id}">
+                <span class="text-sm font-medium ${textClass} transition-colors truncate text-left w-full" title="${sched.name}">${sched.name}</span>
+                <div class="card-action-menu" style="top: 0.125rem; right: 0.125rem;">
+                    <button data-action="switch-schedule" data-value="${id}" class="btn-icon" title="Make Active"><i class="ph ph-arrow-right text-base leading-none"></i></button>
+                    <button data-action="delete-schedule" data-value="${id}" class="btn-icon-danger" title="Discard Result"><i class="ph ph-trash text-base leading-none"></i></button>
+                </div>
+            </div>`;
+        });
+        
+        container.innerHTML = html;
+    },
+
+    toggleGeneratorSidebar() {
+        this.elements.generatorSidebar.classList.toggle('-translate-x-full');
     },
 
     updateFooter(cId) {
@@ -504,10 +555,6 @@ export const UI = {
     openWhitelistModal() {
         this.elements.whitelistInput.value = State.whitelist.join(', ');
         this.modals.open(this.elements.whitelistModal, this.elements.whitelistInput);
-    },
-
-    toggleGeneratorSidebar() {
-        this.elements.generatorSidebar.classList.toggle('-translate-x-full');
     },
 
     showConfirm(title, msg, onConfirmCallback) {
