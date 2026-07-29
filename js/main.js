@@ -435,7 +435,7 @@ export const App = {
                 lastModified: Date.now(),
                 grid: JSON.parse(JSON.stringify(targetSched.grid))
             };
-            State.activeScheduleId = newId;
+            // State.activeScheduleId = newId;
         }
         
         State.pinnedScheduleId = null;
@@ -489,128 +489,156 @@ export const App = {
         else UI.showConfirm("Delete Schedule", "Are you sure you want to permanently delete this schedule?", execute);
     },
 
-    async generateSchedule() {
-        console.log("Parsing active state and booting WASM Solver...");
-        const minCredits = parseInt(document.getElementById('gen-min-credits').value) || 7;
-        const maxCredits = parseInt(document.getElementById('gen-max-credits').value) || 15;
-        const maxTerms = parseInt(document.getElementById('gen-max-terms').value) || 6;
-        const maxResults = parseInt(document.getElementById('gen-max-results').value) || Infinity;
-        const maxTime = parseInt(document.getElementById('gen-max-time').value) || Infinity;
-        
-        UI.setGeneratorLoading(true);
-        UI.setGeneratorSummary('Initializing solver...');
-        const startTime = performance.now();
-
-        try {
-            const parsedData = parseCurriculumState(State);
-            const config = { minCredits, maxCredits, maxTerms, maxOptions: maxResults, maxTime };
-            const result = await generateOptimalSchedule(parsedData, config);
+    async generateSchedule(bypass = false) {
+        const execute = async () => {
+            console.log("Parsing active state and booting WASM Solver...");
+            const minCredits = parseInt(document.getElementById('gen-min-credits').value) || 7;
+            const maxCredits = parseInt(document.getElementById('gen-max-credits').value) || 15;
+            const maxTerms = parseInt(document.getElementById('gen-max-terms').value) || 6;
+            const maxResults = parseInt(document.getElementById('gen-max-results').value) || Infinity;
+            const maxTime = parseInt(document.getElementById('gen-max-time').value) || Infinity;
             
-            const elapsed = ((performance.now() - startTime) / 1000).toFixed(2);
+            UI.setGeneratorLoading(true);
+            UI.setGeneratorSummary('Initializing solver...');
+            const startTime = performance.now();
 
-            if (result.schedules && result.schedules.length > 0) {
-                const processedData = processGeneratedSchedules(result.schedules, parsedData);
-                let outputText = `\nFound ${result.schedules.length} Optimal Schedule(s) Tied for 1st Place (Score: ${result.score}) \n`;
-                outputText += "=".repeat(70) + "\n";
+            try {
+                const parsedData = parseCurriculumState(State);
+                const config = { minCredits, maxCredits, maxTerms, maxOptions: maxResults, maxTime };
+                const result = await generateOptimalSchedule(parsedData, config);
                 
-                State.generatedSchedules = {};
+                const elapsed = ((performance.now() - startTime) / 1000).toFixed(2);
 
-                // Iterate over the sorted and named results
-                processedData.namedSchedules.forEach((item, optionIdx) => {
-                    outputText += `\n--- [Family ${item.familyId}] ${item.name} ---\n`;
-                    const schedule = item.schedule;
-                    let totalDegreeCredits = 0;
-                    const sortedTermIndices = Object.keys(schedule).map(Number).sort((a, b) => a - b);
+                if (result.schedules && result.schedules.length > 0) {
+                    const processedData = processGeneratedSchedules(result.schedules, parsedData);
+                    let outputText = `\nFound ${result.schedules.length} Optimal Schedule(s) Tied for 1st Place (Score: ${result.score}) \n`;
+                    outputText += "=".repeat(70) + "\n";
                     
-                    sortedTermIndices.forEach(tIdx => {
-                        const tId = parsedData.termIds[tIdx];
-                        const termName = parsedData.termNames[tId];
-                        const termCourses = schedule[tIdx];
+                    State.generatedSchedules = {};
+                    const baseGrid = State.activeGrid;
+
+                    // Iterate over the sorted and named results
+                    processedData.namedSchedules.forEach((item, optionIdx) => {
+                        outputText += `\n--- [Family ${item.familyId}] ${item.name} ---\n`;
+                        const schedule = item.schedule;
+                        let totalDegreeCredits = 0;
+                        const sortedTermIndices = Object.keys(schedule).map(Number).sort((a, b) => a - b);
                         
-                        let termCredits = 0;
-                        let courseListString = "";
-                        termCourses.forEach(c => {
-                            const cCredits = parsedData.courseCredits[c];
-                            termCredits += cCredits;
-                            courseListString += `    [${cCredits} cr] ${c}\n`;
+                        sortedTermIndices.forEach(tIdx => {
+                            const tId = parsedData.termIds[tIdx];
+                            const termName = parsedData.termNames[tId];
+                            const termCourses = schedule[tIdx];
+                            
+                            let termCredits = 0;
+                            let courseListString = "";
+                            termCourses.forEach(c => {
+                                const cCredits = parsedData.courseCredits[c];
+                                termCredits += cCredits;
+                                courseListString += `    [${cCredits} cr] ${c}\n`;
+                            });
+                            totalDegreeCredits += termCredits;
+                            outputText += `  ${termName} (Term ${tIdx + 1}) - ${termCredits} credits:\n${courseListString}`;
                         });
-                        totalDegreeCredits += termCredits;
-                        outputText += `  ${termName} (Term ${tIdx + 1}) - ${termCredits} credits:\n${courseListString}`;
-                    });
-                    outputText += "-".repeat(25) + "\n";
-                    outputText += `  Total Degree Credits: ${totalDegreeCredits}\n`;
+                        outputText += "-".repeat(25) + "\n";
+                        outputText += `  Total Degree Credits: ${totalDegreeCredits}\n`;
 
-                    // Push Formatted UI Grids to App State
-                    const genId = 'gen-sched-' + Date.now() + '-' + optionIdx;
-                    const uiGrid = {};
+                        // Push Formatted UI Grids to App State
+                        const genId = 'gen-sched-' + Date.now() + '-' + optionIdx;
+                        
+                        // 1. Deep clone the base grid and set all instances to false (hidden)
+                        const uiGrid = JSON.parse(JSON.stringify(baseGrid));
+                        Object.keys(uiGrid).forEach(cId => {
+                            Object.keys(uiGrid[cId]).forEach(tId => {
+                                uiGrid[cId][tId] = false;
+                            });
+                        });
+                        
+                        // 2. Set solver-selected instances to true (visible)
+                        Object.entries(schedule).forEach(([tIdx, cIds]) => {
+                            const termId = parsedData.termIds[parseInt(tIdx)];
+                            cIds.forEach(cId => {
+                                if (!uiGrid[cId]) uiGrid[cId] = {};
+                                uiGrid[cId][termId] = true;
+                            });
+                        });
+
+                        State.generatedSchedules[genId] = {
+                            name: item.name,
+                            grid: uiGrid
+                        };
+                    });
                     
-                    Object.entries(schedule).forEach(([tIdx, cIds]) => {
-                        const termId = parsedData.termIds[parseInt(tIdx)];
-                        cIds.forEach(cId => {
-                            if (!uiGrid[cId]) uiGrid[cId] = {};
-                            uiGrid[cId][termId] = true;
-                        });
-                    });
-
-                    State.generatedSchedules[genId] = {
-                        name: item.name,
-                        grid: uiGrid
-                    };
-                });
-                
-                console.log(outputText);
-                
-                UI.setGeneratorSummary(`Found ${result.schedules.length} schedule(s) with score ${result.score} in ${elapsed}s`);
-                if (UI.renderGeneratedSchedules) UI.renderGeneratedSchedules();
-                
-            } else {
+                    console.log(outputText);
+                    
+                    UI.setGeneratorSummary(`Found ${result.schedules.length} schedule(s) with score ${result.score} in ${elapsed}s`);
+                    if (UI.renderGeneratedSchedules) UI.renderGeneratedSchedules();
+                    
+                } else {
+                    State.generatedSchedules = {};
+                    const statusCode = result.status || 'UNKNOWN';
+                    console.log(`INFEASIBLE \n\nThe solver could not fit the degree requirements into ${config.maxTerms} terms. Status code: ${statusCode}`);
+                    
+                    UI.setGeneratorSummary(`No schedules found (${statusCode}) in ${elapsed}s`, true);
+                    if (UI.renderGeneratedSchedules) UI.renderGeneratedSchedules(); // Clears old cards
+                    
+                    // Inject Error Notice
+                    if (UI.elements.generatorResultsList) {
+                        UI.elements.generatorResultsList.innerHTML = `
+                            <div class="text-caption text-danger-main p-3 text-center border border-dashed border-danger-border bg-danger-bg rounded mt-1">
+                                <strong>Status: ${statusCode}</strong><br>The solver could not fit the degree requirements into ${config.maxTerms} terms with the current constraints.
+                            </div>
+                        `;
+                    }
+                }
+            } catch (error) {
+                console.error("Solver Error:", error);
                 State.generatedSchedules = {};
-                const statusCode = result.status || 'UNKNOWN';
-                console.log(`INFEASIBLE \n\nThe solver could not fit the degree requirements into ${config.maxTerms} terms. Status code: ${statusCode}`);
+                UI.setGeneratorSummary('Solver encountered a fatal error.', true);
+                if (UI.renderGeneratedSchedules) UI.renderGeneratedSchedules(); 
                 
-                UI.setGeneratorSummary(`No schedules found (${statusCode}) in ${elapsed}s`, true);
-                if (UI.renderGeneratedSchedules) UI.renderGeneratedSchedules(); // Clears old cards
-                
-                // Inject Error Notice
+                // Inject Fatal Error Notice
                 if (UI.elements.generatorResultsList) {
                     UI.elements.generatorResultsList.innerHTML = `
-                        <div class="text-caption text-danger-main p-3 text-center border border-dashed border-danger-border bg-danger-bg rounded mt-1">
-                            <strong>Status: ${statusCode}</strong><br>The solver could not fit the degree requirements into ${config.maxTerms} terms with the current constraints.
+                        <div class="text-caption text-danger-main p-3 text-center border border-dashed border-danger-border bg-danger-bg rounded mt-1 break-words">
+                            <strong>Error:</strong><br>${error.message || 'Check the console for details.'}
                         </div>
                     `;
                 }
+            } finally {
+                UI.setGeneratorLoading(false);
             }
-        } catch (error) {
-            console.error("Solver Error:", error);
-            State.generatedSchedules = {};
-            UI.setGeneratorSummary('Solver encountered a fatal error.', true);
-            if (UI.renderGeneratedSchedules) UI.renderGeneratedSchedules(); 
-            
-            // Inject Fatal Error Notice
-            if (UI.elements.generatorResultsList) {
-                UI.elements.generatorResultsList.innerHTML = `
-                    <div class="text-caption text-danger-main p-3 text-center border border-dashed border-danger-border bg-danger-bg rounded mt-1 break-words">
-                        <strong>Error:</strong><br>${error.message || 'Check the console for details.'}
-                    </div>
-                `;
-            }
-        } finally {
-            UI.setGeneratorLoading(false);
+        };
+
+        const hasExistingResults = Object.keys(State.generatedSchedules || {}).length > 0;
+
+        if (hasExistingResults && !bypass) {
+            UI.showConfirm(
+                "Overwrite Results", 
+                "Generating new schedules will discard your current optimal results. Proceed?", 
+                execute
+            );
+        } else {
+            execute();
         }
     },
 
-    clearGenerated() {
-        State.generatedSchedules = {};
-        
-        // Discard visual previews if they were pointing to a generated result
-        if (State.pinnedScheduleId && String(State.pinnedScheduleId).startsWith('gen-')) State.pinnedScheduleId = null;
-        if (State.hoveredScheduleId && String(State.hoveredScheduleId).startsWith('gen-')) State.hoveredScheduleId = null;
-        
-        UI.setGeneratorSummary('');
-        if (UI.renderGeneratedSchedules) UI.renderGeneratedSchedules();
-        
-        UI.updateScheduleDisplay();
-        UI.renderTable();
+    clearGenerated(bypass = false) {
+        const execute = () => {
+            State.generatedSchedules = {};
+            
+            // Discard visual previews if they were pointing to a generated result
+            if (State.pinnedScheduleId && String(State.pinnedScheduleId).startsWith('gen-')) State.pinnedScheduleId = null;
+            if (State.hoveredScheduleId && String(State.hoveredScheduleId).startsWith('gen-')) State.hoveredScheduleId = null;
+            
+            UI.setGeneratorSummary('');
+            if (UI.renderGeneratedSchedules) UI.renderGeneratedSchedules();
+            
+            UI.updateScheduleDisplay();
+            UI.renderTable();
+        };
+
+        if (bypass) execute();
+        else UI.showConfirm("Clear Results", "Are you sure you want to discard all generated schedules?", execute);
     },
 };
 
