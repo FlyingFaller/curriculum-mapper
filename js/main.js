@@ -491,39 +491,32 @@ export const App = {
 
     async generateSchedule() {
         console.log("Parsing active state and booting WASM Solver...");
-
         const minCredits = parseInt(document.getElementById('gen-min-credits').value) || 7;
         const maxCredits = parseInt(document.getElementById('gen-max-credits').value) || 15;
         const maxTerms = parseInt(document.getElementById('gen-max-terms').value) || 6;
         const maxResults = parseInt(document.getElementById('gen-max-results').value) || Infinity;
         const maxTime = parseInt(document.getElementById('gen-max-time').value) || Infinity;
-        console.log(minCredits, maxCredits, maxTerms, maxResults, maxTime);
+        
+        UI.setGeneratorLoading(true);
+        UI.setGeneratorSummary('Initializing solver...');
+        const startTime = performance.now();
 
         try {
             const parsedData = parseCurriculumState(State);
             const config = { minCredits, maxCredits, maxTerms, maxOptions: maxResults, maxTime };
-
             const result = await generateOptimalSchedule(parsedData, config);
+            
+            const elapsed = ((performance.now() - startTime) / 1000).toFixed(2);
 
-            if (result.schedules.length > 0) {
-                // Now returns { namedSchedules: [...], debug: {...} }
+            if (result.schedules && result.schedules.length > 0) {
                 const processedData = processGeneratedSchedules(result.schedules, parsedData);
-
-                // --- DEBUG CONSOLE LOGS ---
-                console.log("%c=== DEBUG: Global Course Rarity ===", "color: #3b82f6; font-weight: bold;");
-                console.table(processedData.debug.globalCourseFreq);
-                console.log("%c=== DEBUG: Family Groupings ===", "color: #10b981; font-weight: bold;");
-                console.table(processedData.debug.families);
-                // --------------------------
-
                 let outputText = `\nFound ${result.schedules.length} Optimal Schedule(s) Tied for 1st Place (Score: ${result.score}) \n`;
                 outputText += "=".repeat(70) + "\n";
-
+                
                 State.generatedSchedules = {};
 
                 // Iterate over the sorted and named results
                 processedData.namedSchedules.forEach((item, optionIdx) => {
-                    // Inject Family ID and Name to Console
                     outputText += `\n--- [Family ${item.familyId}] ${item.name} ---\n`;
                     const schedule = item.schedule;
                     let totalDegreeCredits = 0;
@@ -566,13 +559,58 @@ export const App = {
                 });
                 
                 console.log(outputText);
+                
+                UI.setGeneratorSummary(`Found ${result.schedules.length} schedule(s) with score ${result.score} in ${elapsed}s`);
                 if (UI.renderGeneratedSchedules) UI.renderGeneratedSchedules();
+                
             } else {
-                console.log(`INFEASIBLE \n\nThe solver could not fit the degree requirements into ${config.maxTerms} terms. Status code: ${result.status}`);
+                State.generatedSchedules = {};
+                const statusCode = result.status || 'UNKNOWN';
+                console.log(`INFEASIBLE \n\nThe solver could not fit the degree requirements into ${config.maxTerms} terms. Status code: ${statusCode}`);
+                
+                UI.setGeneratorSummary(`No schedules found (${statusCode}) in ${elapsed}s`, true);
+                if (UI.renderGeneratedSchedules) UI.renderGeneratedSchedules(); // Clears old cards
+                
+                // Inject Error Notice
+                if (UI.elements.generatorResultsList) {
+                    UI.elements.generatorResultsList.innerHTML = `
+                        <div class="text-caption text-danger-main p-3 text-center border border-dashed border-danger-border bg-danger-bg rounded mt-1">
+                            <strong>Status: ${statusCode}</strong><br>The solver could not fit the degree requirements into ${config.maxTerms} terms with the current constraints.
+                        </div>
+                    `;
+                }
             }
         } catch (error) {
             console.error("Solver Error:", error);
+            State.generatedSchedules = {};
+            UI.setGeneratorSummary('Solver encountered a fatal error.', true);
+            if (UI.renderGeneratedSchedules) UI.renderGeneratedSchedules(); 
+            
+            // Inject Fatal Error Notice
+            if (UI.elements.generatorResultsList) {
+                UI.elements.generatorResultsList.innerHTML = `
+                    <div class="text-caption text-danger-main p-3 text-center border border-dashed border-danger-border bg-danger-bg rounded mt-1 break-words">
+                        <strong>Error:</strong><br>${error.message || 'Check the console for details.'}
+                    </div>
+                `;
+            }
+        } finally {
+            UI.setGeneratorLoading(false);
         }
+    },
+
+    clearGenerated() {
+        State.generatedSchedules = {};
+        
+        // Discard visual previews if they were pointing to a generated result
+        if (State.pinnedScheduleId && String(State.pinnedScheduleId).startsWith('gen-')) State.pinnedScheduleId = null;
+        if (State.hoveredScheduleId && String(State.hoveredScheduleId).startsWith('gen-')) State.hoveredScheduleId = null;
+        
+        UI.setGeneratorSummary('');
+        if (UI.renderGeneratedSchedules) UI.renderGeneratedSchedules();
+        
+        UI.updateScheduleDisplay();
+        UI.renderTable();
     },
 };
 

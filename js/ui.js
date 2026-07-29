@@ -30,7 +30,7 @@ export const UI = {
             'export-modal', 'export-format', 'export-options-container', 'export-ignore-hidden', 
             'export-ignore-bank', 'export-include-meta', 'export-meta-label',
             'generator-sidebar', 'sidebar-resizer', 'gen-max-terms', 'gen-max-results', 'gen-max-time', 
-            'saved-schedules-list', 'generator-results-list',
+            'saved-schedules-list', 'generator-results-list', 'btn-generate', 'generator-summary',
             'active-schedule-name', 'preview-schedule-name', 'preview-schedule-text', 
             'sidebar-active-name'
         ];
@@ -340,7 +340,7 @@ export const UI = {
                     </span>
                     <span class="text-sm font-medium ${textClass} transition-colors truncate text-left w-full" title="${sched.name}">${sched.name}</span>
                     <div class="card-action-menu" style="top: 0.125rem; right: 0.125rem;">
-                        <button data-action="switch-schedule" data-value="${id}" class="btn-icon" title="Make Active"><i class="ph ph-arrow-right text-base leading-none"></i></button>
+                        <button data-action="switch-schedule" data-value="${id}" class="btn-icon" title="Save and Make Active"><i class="ph ph-floppy-disk text-base leading-none"></i></button>
                         <button data-action="delete-schedule" data-value="${id}" class="btn-icon-danger" title="Discard Result"><i class="ph ph-trash text-base leading-none"></i></button>
                     </div>
                 </div>
@@ -391,6 +391,37 @@ export const UI = {
                 textSpan.classList.add(...textUnpinnedNoneClasses);
             }
         });
+    },
+
+    setGeneratorLoading(isLoading) {
+        const btn = this.elements.btnGenerate;
+        if (!btn) return;
+
+        if (isLoading) {
+            btn.disabled = true;
+            btn.classList.add('opacity-70', 'cursor-not-allowed');
+            this._generatorStartTime = Date.now();
+            
+            // Live timer interval loop
+            this._generatorTimer = setInterval(() => {
+                const elapsed = ((Date.now() - this._generatorStartTime) / 1000).toFixed(1);
+                btn.innerHTML = `<i class="ph ph-spinner animate-spin text-lg"></i> <span>Calculating (${elapsed}s)</span>`;
+            }, 100);
+        } else {
+            clearInterval(this._generatorTimer);
+            btn.disabled = false;
+            btn.classList.remove('opacity-70', 'cursor-not-allowed');
+            btn.innerHTML = `<i class="ph-bold ph-play"></i> <span>Generate</span>`;
+        }
+    },
+
+    setGeneratorSummary(text, isError = false) {
+        const summaryEl = this.elements.generatorSummary;
+        if (summaryEl) {
+            summaryEl.innerText = text;
+            summaryEl.classList.toggle('text-danger-main', isError);
+            summaryEl.classList.toggle('text-text-muted', !isError);
+        }
     },
 
     updateFooter(cId) {

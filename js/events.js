@@ -60,6 +60,7 @@ export function setupEventListeners() {
             case 'toggle-pin-schedule': App.togglePinSchedule(value); break;
             case 'clear-color'        : UI.utils.setColoris(target, ''); break;
             case 'generate-schedule'  : App.generateSchedule(); break;
+            case 'clear-generated'    : App.clearGenerated(); break;
         }
     });
 

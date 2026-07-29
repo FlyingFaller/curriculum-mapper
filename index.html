@@ -397,7 +397,7 @@
             </div>
             
             <!-- Top Fixed Block: Settings, Generate, Active Schedule -->
-            <div class="p-4 flex flex-col gap-4 shrink-0 border-b border-border">
+            <div class="p-4 pb-2 flex flex-col gap-4 shrink-0">
                 <div class="flex flex-col gap-2">
                     <div class="grid grid-cols-2 gap-2 mb-1">
                         <div>
@@ -423,13 +423,13 @@
                             <input type="number" id="gen-max-time" value="5" min="1" class="w-full bg-canvas border border-border text-text-main rounded px-2 py-1 text-caption focus:border-border-focus outline-none">
                         </div>
                     </div>
-                    <button data-action="generate-schedule" class="mt-1 w-full bg-accent hover:bg-accent-hover text-white rounded py-1.5 text-caption font-bold transition-colors shadow-sm flex items-center justify-center gap-1.5">
-                        <i class="ph-bold ph-play"></i> Generate
+                    <button id="btn-generate" data-action="generate-schedule" class="mt-1 w-full bg-accent hover:bg-accent-hover text-white rounded py-1.5 text-caption font-bold transition-colors shadow-sm flex items-center justify-center gap-1.5">
+                        <i class="ph-bold ph-play"></i> <span>Generate</span>
                     </button>
                 </div>
                 <div class="space-y-2 flex flex-col pt-1">
                     <div class="flex justify-between items-center">
-                        <h4 class="text-micro font-bold text-text-muted uppercase tracking-wider">Active Schedule</h4>
+                        <h4 class="text-caption font-bold text-text-muted uppercase tracking-wider">Active Schedule</h4>
                         <button data-action="snapshot-schedule" class="text-text-muted hover:text-accent transition-colors" title="Duplicate Active Schedule">
                             <i class="ph ph-copy text-sm"></i>
                         </button>
@@ -446,15 +446,20 @@
             </div>
 
             <!-- Middle Flexible Block: Saved Schedules -->
-            <div class="flex flex-col shrink-0 max-h-[45vh] border-b border-border p-4">
-                <!-- Button removed from here, just leaving the header -->
-                <h4 class="text-micro font-bold text-text-muted uppercase tracking-wider shrink-0 mb-2">Saved Schedules</h4>
+            <div class="flex flex-col shrink-0 max-h-[45vh] px-4 py-2">
+                <h4 class="text-caption font-bold text-text-muted uppercase tracking-wider shrink-0 mb-2">Saved Schedules</h4>
                 <div id="saved-schedules-list" class="overflow-y-auto flex flex-col pr-1"></div>
             </div>
 
             <!-- Bottom Flexible Block: Optimal Results -->
-            <div class="flex-1 flex flex-col min-h-0 p-4">
-                <h4 class="text-micro font-bold text-text-muted uppercase tracking-wider shrink-0 mb-2">Optimal Results</h4>
+            <div class="flex-1 flex flex-col min-h-0 px-4 pt-2 pb-4">
+                <div class="flex justify-between items-center mb-1 shrink-0">
+                    <h4 class="text-caption font-bold text-text-muted uppercase tracking-wider">Optimal Results</h4>
+                    <button data-action="clear-generated" class="text-text-muted hover:text-danger-main transition-colors" title="Clear Results">
+                        <i class="ph ph-broom text-sm"></i>
+                    </button>
+                </div>
+                <div id="generator-summary" class="text-caption font-medium text-text-muted mb-2 shrink-0 empty:hidden"></div>
                 <div id="generator-results-list" class="flex-1 overflow-y-auto flex flex-col pr-1">
                     <div class="text-caption text-text-muted italic p-3 text-center border border-dashed border-border rounded bg-canvas">
                         No results.
