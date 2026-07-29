@@ -414,9 +414,11 @@ export const App = {
     togglePinSchedule(id) {
         State.pinnedScheduleId = (State.pinnedScheduleId === id) ? null : id;
         State.hoveredScheduleId = null; 
-        UI.renderSidebarSchedules();
-        if (UI.renderGeneratedSchedules) UI.renderGeneratedSchedules();
-        UI.renderTable();
+        
+        // Use targeted DOM class swapping instead of full HTML re-renders
+        if (UI.updateSidebarHighlights) UI.updateSidebarHighlights();
+        
+        UI.renderTable(); 
     },
 
     switchSchedule(scheduleId) {

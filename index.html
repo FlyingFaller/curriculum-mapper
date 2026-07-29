@@ -386,6 +386,7 @@
         </div>
 
         <div id="generator-sidebar" class="fixed top-0 left-0 h-full w-60 bg-surface border-r border-border shadow-[4px_0_24px_rgba(0,0,0,0.08)] transform -translate-x-full transition-transform duration-300 z-[55] flex flex-col">
+            <div id="sidebar-resizer" class="absolute top-0 -right-1 w-2 h-full cursor-col-resize bg-transparent hover:bg-accent-hover transition-colors z-50"></div>
             <div class="px-4 py-3 border-b border-border flex justify-between items-center bg-surface-alt shrink-0">
                 <div class="flex items-center gap-2 text-accent">
                     <h3 class="font-bold text-base text-text-main">Schedule Generator</h3>
@@ -448,13 +449,13 @@
             <div class="flex flex-col shrink-0 max-h-[45vh] border-b border-border p-4">
                 <!-- Button removed from here, just leaving the header -->
                 <h4 class="text-micro font-bold text-text-muted uppercase tracking-wider shrink-0 mb-2">Saved Schedules</h4>
-                <div id="saved-schedules-list" class="overflow-y-auto flex flex-col gap-2 pr-1"></div>
+                <div id="saved-schedules-list" class="overflow-y-auto flex flex-col pr-1"></div>
             </div>
 
             <!-- Bottom Flexible Block: Optimal Results -->
             <div class="flex-1 flex flex-col min-h-0 p-4">
                 <h4 class="text-micro font-bold text-text-muted uppercase tracking-wider shrink-0 mb-2">Optimal Results</h4>
-                <div id="generator-results-list" class="flex-1 overflow-y-auto flex flex-col gap-2 pr-1">
+                <div id="generator-results-list" class="flex-1 overflow-y-auto flex flex-col pr-1">
                     <div class="text-caption text-text-muted italic p-3 text-center border border-dashed border-border rounded bg-canvas">
                         No results.
                     </div>

@@ -157,6 +157,7 @@ thead th.cell-size {
 thead th {
     position: sticky; top: -1px; z-index: 20;
     box-shadow: 0 1px 0 0 var(--border-color); background-clip: padding-box; min-height: 3.5rem;
+    height: 1px;
 }
 
 .sticky-col {
@@ -369,4 +370,13 @@ table.compact-table { height: 100%; box-sizing: border-box; }
 .pdf-export-mode.pdf-compact-mode .compact-table .course-bank-cell,
 .pdf-export-mode.pdf-compact-mode .compact-table .sticky-bottom-row td:first-child {
     display: none !important;
+}
+
+/* =========================================
+   SCHEDULE CARD STUFF
+   ========================================= */
+
+.schedule-item {
+    content-visibility: auto;
+    contain-intrinsic-size: 44px; /* Approximate height of the card so the scrollbar doesn't jump */
 }

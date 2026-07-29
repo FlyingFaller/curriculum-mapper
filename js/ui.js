@@ -29,7 +29,7 @@ export const UI = {
             'confirm-modal', 'confirm-title', 'confirm-message', 'confirm-btn',
             'export-modal', 'export-format', 'export-options-container', 'export-ignore-hidden', 
             'export-ignore-bank', 'export-include-meta', 'export-meta-label',
-            'generator-sidebar', 'gen-max-terms', 'gen-max-results', 'gen-max-time', 
+            'generator-sidebar', 'sidebar-resizer', 'gen-max-terms', 'gen-max-results', 'gen-max-time', 
             'saved-schedules-list', 'generator-results-list',
             'active-schedule-name', 'preview-schedule-name', 'preview-schedule-text', 
             'sidebar-active-name'
@@ -108,28 +108,53 @@ export const UI = {
     },
 
     initResizer() {
-        const resizer = this.elements.footerResizer;
+        // Footer (Vertical) Resizer Setup
+        const footerResizer = this.elements.footerResizer;
         const footer = this.elements.infoFooter;
-        let isDragging = false;
+        let isDraggingFooter = false;
 
-        resizer.addEventListener('mousedown', () => {
-            isDragging = true;
+        // Sidebar (Horizontal) Resizer Setup
+        const sidebarResizer = this.elements.sidebarResizer;
+        const sidebar = this.elements.generatorSidebar;
+        let isDraggingSidebar = false;
+
+        footerResizer.addEventListener('mousedown', () => {
+            isDraggingFooter = true;
             document.body.style.cursor = 'row-resize';
             document.body.classList.add('select-none');
         });
 
+        sidebarResizer.addEventListener('mousedown', () => {
+            isDraggingSidebar = true;
+            document.body.style.cursor = 'col-resize';
+            document.body.classList.add('select-none');
+        });
+
         document.addEventListener('mousemove', (e) => {
-            if (!isDragging) return;
-            let newHeight = window.innerHeight - e.clientY;
-            const maxHeight = window.innerHeight * 0.8;
-            if (newHeight < 100) newHeight = 100;
-            if (newHeight > maxHeight) newHeight = maxHeight;
-            footer.style.height = `${newHeight}px`;
+            if (isDraggingFooter) {
+                let newHeight = window.innerHeight - e.clientY;
+                const maxHeight = window.innerHeight * 0.8;
+                if (newHeight < 100) newHeight = 100;
+                if (newHeight > maxHeight) newHeight = maxHeight;
+                footer.style.height = `${newHeight}px`;
+            } else if (isDraggingSidebar) {
+                let newWidth = e.clientX;
+                const minWidth = 240; // 240px matches Tailwind's w-60
+                const maxWidth = window.innerWidth * 0.5; // Cap at 50% of viewport width
+                if (newWidth < minWidth) newWidth = minWidth;
+                if (newWidth > maxWidth) newWidth = maxWidth;
+                sidebar.style.width = `${newWidth}px`;
+            }
         });
 
         document.addEventListener('mouseup', () => {
-            if (isDragging) {
-                isDragging = false;
+            if (isDraggingFooter) {
+                isDraggingFooter = false;
+                document.body.style.cursor = '';
+                document.body.classList.remove('select-none');
+            }
+            if (isDraggingSidebar) {
+                isDraggingSidebar = false;
                 document.body.style.cursor = '';
                 document.body.classList.remove('select-none');
             }
@@ -251,20 +276,21 @@ export const UI = {
                 activeClass = 'selected-card bg-[var(--color-hover)] shadow-md';
                 textClass = 'text-white';
             } else if (anyPinned) {
-                activeClass = 'border-border bg-surface hover:bg-surface-hover hover:border-border-focus';
+                activeClass = 'border-border bg-surface group-hover:bg-surface-hover group-hover:border-border-focus';
                 textClass = 'text-text-main group-hover:text-text-main';
             } else {
-                activeClass = 'border-border bg-surface hover:bg-[var(--color-hover)] hover:border-[var(--color-hover)]';
+                activeClass = 'border-border bg-surface group-hover:bg-[var(--color-hover)] group-hover:border-[var(--color-hover)]';
                 textClass = 'text-text-main group-hover:text-white';
             }
             
             html += `
-            <div class="schedule-item border ${activeClass} rounded-md shadow-sm p-2 flex items-center group relative cursor-pointer transition-colors duration-200"
-                 data-sid="${id}" data-action="toggle-pin-schedule" data-value="${id}">
-                <span class="text-sm font-medium ${textClass} transition-colors truncate text-left w-full" title="${sched.name}">${sched.name}</span>
-                <div class="card-action-menu" style="top: 0.125rem; right: 0.125rem;">
-                    <button data-action="switch-schedule" data-value="${id}" class="btn-icon" title="Make Active"><i class="ph ph-arrow-right text-base leading-none"></i></button>
-                    <button data-action="delete-schedule" data-value="${id}" class="btn-icon-danger" title="Delete Schedule"><i class="ph ph-trash text-base leading-none"></i></button>
+            <div class="schedule-item py-1 w-full cursor-pointer group" data-sid="${id}" data-action="toggle-pin-schedule" data-value="${id}">
+                <div class="border ${activeClass} rounded-md shadow-sm p-2 flex items-center relative transition-colors duration-200">
+                    <span class="text-sm font-medium ${textClass} transition-colors truncate text-left w-full" title="${sched.name}">${sched.name}</span>
+                    <div class="card-action-menu" style="top: 0.125rem; right: 0.125rem;">
+                        <button data-action="switch-schedule" data-value="${id}" class="btn-icon" title="Make Active"><i class="ph ph-arrow-right text-base leading-none"></i></button>
+                        <button data-action="delete-schedule" data-value="${id}" class="btn-icon-danger" title="Delete Schedule"><i class="ph ph-trash text-base leading-none"></i></button>
+                    </div>
                 </div>
             </div>`;
         });
@@ -288,30 +314,35 @@ export const UI = {
         }
         
         let html = '';
-        schedIds.forEach(id => {
+        schedIds.forEach((id, index) => {
             const sched = State.generatedSchedules[id];
             const isPinned = State.pinnedScheduleId === id;
             
             let activeClass = '';
             let textClass = '';
+
             if (isPinned) {
                 activeClass = 'selected-card bg-[var(--color-hover)] shadow-md';
                 textClass = 'text-white';
             } else if (anyPinned) {
-                activeClass = 'border-border bg-surface hover:bg-surface-hover hover:border-border-focus';
+                activeClass = 'border-border bg-surface group-hover:bg-surface-hover group-hover:border-border-focus';
                 textClass = 'text-text-main group-hover:text-text-main';
             } else {
-                activeClass = 'border-border bg-surface hover:bg-[var(--color-hover)] hover:border-[var(--color-hover)]';
+                activeClass = 'border-border bg-surface group-hover:bg-[var(--color-hover)] group-hover:border-[var(--color-hover)]';
                 textClass = 'text-text-main group-hover:text-white';
             }
             
             html += `
-            <div class="schedule-item border ${activeClass} rounded-md shadow-sm p-2 flex items-center group relative cursor-pointer transition-colors duration-200"
-                 data-sid="${id}" data-action="toggle-pin-schedule" data-value="${id}">
-                <span class="text-sm font-medium ${textClass} transition-colors truncate text-left w-full" title="${sched.name}">${sched.name}</span>
-                <div class="card-action-menu" style="top: 0.125rem; right: 0.125rem;">
-                    <button data-action="switch-schedule" data-value="${id}" class="btn-icon" title="Make Active"><i class="ph ph-arrow-right text-base leading-none"></i></button>
-                    <button data-action="delete-schedule" data-value="${id}" class="btn-icon-danger" title="Discard Result"><i class="ph ph-trash text-base leading-none"></i></button>
+            <div class="schedule-item pt-2 pb-1 w-full cursor-pointer group" data-sid="${id}" data-action="toggle-pin-schedule" data-value="${id}">
+                <div class="border ${activeClass} rounded-md shadow-sm p-2 flex items-center relative transition-colors duration-200">
+                    <span class="absolute -top-2 -left-1 px-1 text-micro font-bold text-text-muted bg-surface z-10 leading-none group-hover:text-text-main transition-colors">
+                        ${index + 1}
+                    </span>
+                    <span class="text-sm font-medium ${textClass} transition-colors truncate text-left w-full" title="${sched.name}">${sched.name}</span>
+                    <div class="card-action-menu" style="top: 0.125rem; right: 0.125rem;">
+                        <button data-action="switch-schedule" data-value="${id}" class="btn-icon" title="Make Active"><i class="ph ph-arrow-right text-base leading-none"></i></button>
+                        <button data-action="delete-schedule" data-value="${id}" class="btn-icon-danger" title="Discard Result"><i class="ph ph-trash text-base leading-none"></i></button>
+                    </div>
                 </div>
             </div>`;
         });
@@ -321,6 +352,45 @@ export const UI = {
 
     toggleGeneratorSidebar() {
         this.elements.generatorSidebar.classList.toggle('-translate-x-full');
+    },
+
+    updateSidebarHighlights() {
+        const anyPinned = !!State.pinnedScheduleId;
+        
+        document.querySelectorAll('.schedule-item').forEach(el => {
+            const id = el.getAttribute('data-sid');
+            const isPinned = State.pinnedScheduleId === id;
+            
+            const innerBox = el.querySelector('.border');
+            const textSpan = el.querySelector('span.truncate.text-left');
+            
+            if (!innerBox || !textSpan) return;
+
+            // Class groupings
+            const activeClasses = ['selected-card', 'bg-[var(--color-hover)]', 'shadow-md'];
+            const unpinnedAnyClasses = ['border-border', 'bg-surface', 'group-hover:bg-surface-hover', 'group-hover:border-border-focus'];
+            const unpinnedNoneClasses = ['border-border', 'bg-surface', 'group-hover:bg-[var(--color-hover)]', 'group-hover:border-[var(--color-hover)]'];
+            
+            const textActiveClasses = ['text-white'];
+            const textUnpinnedAnyClasses = ['text-text-main', 'group-hover:text-text-main'];
+            const textUnpinnedNoneClasses = ['text-text-main', 'group-hover:text-white'];
+
+            // 1. Strip all possible dynamic state classes
+            innerBox.classList.remove(...activeClasses, ...unpinnedAnyClasses, ...unpinnedNoneClasses);
+            textSpan.classList.remove(...textActiveClasses, ...textUnpinnedAnyClasses, ...textUnpinnedNoneClasses);
+
+            // 2. Re-apply the correct targeted classes
+            if (isPinned) {
+                innerBox.classList.add(...activeClasses);
+                textSpan.classList.add(...textActiveClasses);
+            } else if (anyPinned) {
+                innerBox.classList.add(...unpinnedAnyClasses);
+                textSpan.classList.add(...textUnpinnedAnyClasses);
+            } else {
+                innerBox.classList.add(...unpinnedNoneClasses);
+                textSpan.classList.add(...textUnpinnedNoneClasses);
+            }
+        });
     },
 
     updateFooter(cId) {
