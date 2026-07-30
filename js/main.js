@@ -564,7 +564,11 @@ export const App = {
 
                         State.generatedSchedules[genId] = {
                             name: item.name,
-                            grid: uiGrid
+                            grid: uiGrid,
+                            totalCredits: item.totalCredits,
+                            maxTermLoad: item.maxTermLoad,
+                            sortedTermLoadsDesc: item.sortedTermLoadsDesc,
+                            sortedTermLoadsAsc: item.sortedTermLoadsAsc
                         };
                     });
                     
@@ -639,6 +643,15 @@ export const App = {
 
         if (bypass) execute();
         else UI.showConfirm("Clear Results", "Are you sure you want to discard all generated schedules?", execute);
+    },
+
+    toggleGeneratorFilters() {
+        const panel = document.getElementById('generator-filters-panel');
+        if (panel) panel.classList.toggle('hidden');
+    },
+
+    applyGeneratorFilters() {
+        if (UI.renderGeneratedSchedules) UI.renderGeneratedSchedules();
     },
 };
 

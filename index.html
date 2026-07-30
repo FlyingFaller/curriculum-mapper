@@ -420,7 +420,7 @@
                         </div>
                         <div>
                             <label class="block text-micro font-bold text-text-muted mb-0.5 uppercase tracking-wider" title="Max Compute Time (sec)">Max Time (secs)</label>
-                            <input type="number" id="gen-max-time" value="5" min="1" class="w-full bg-canvas border border-border text-text-main rounded px-2 py-1 text-caption focus:border-border-focus outline-none">
+                            <input type="number" id="gen-max-time" value="5" placeholder="∞" min="1" class="w-full bg-canvas border border-border text-text-main rounded px-2 py-1 text-caption focus:border-border-focus outline-none">
                         </div>
                     </div>
                     <button id="btn-generate" data-action="generate-schedule" class="mt-1 w-full bg-accent hover:bg-accent-hover text-white rounded py-1.5 text-caption font-bold transition-colors shadow-sm flex items-center justify-center gap-1.5">
@@ -455,10 +455,47 @@
             <div class="flex-1 flex flex-col min-h-0 px-4 pt-2 pb-4">
                 <div class="flex justify-between items-center mb-1 shrink-0">
                     <h4 class="text-caption font-bold text-text-muted uppercase tracking-wider">Optimal Results</h4>
-                    <button data-action="clear-generated" class="text-text-muted hover:text-danger-main transition-colors" title="Clear Results">
-                        <i class="ph ph-broom text-sm"></i>
+                    <div class="flex gap-2">
+                        <button data-action="toggle-generator-filters" class="text-text-muted hover:text-accent transition-colors" title="Filter & Sort">
+                            <i class="ph ph-funnel text-sm"></i>
+                        </button>
+                        <button data-action="clear-generated" class="text-text-muted hover:text-danger-main transition-colors" title="Clear Results">
+                            <i class="ph ph-broom text-sm"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Collapsible Filter Panel -->
+                <div id="generator-filters-panel" class="hidden flex flex-col gap-3 mb-2 shrink-0 border border-border rounded p-3 bg-surface-alt">
+        
+                    <!-- Filter Section -->
+                    <div class="flex flex-col gap-1.5">
+                        <label class="block text-micro font-bold text-text-muted uppercase tracking-wider">Filter</label>
+                        <input type="text" id="gen-filter-courses" placeholder="e.g. CS101, -PHYS, MATH:1" class="w-full bg-canvas border border-border text-text-main rounded px-2 py-1 text-caption outline-none focus:border-border-focus" title="Syntax: COURSE, -EXCLUDE, COURSE:TERM">
+                        <div class="flex gap-2">
+                            <input type="number" id="gen-filter-min-credits" placeholder="Min Cr." min="0" class="w-1/2 bg-canvas border border-border text-text-main rounded px-2 py-1 text-caption outline-none focus:border-border-focus">
+                            <input type="number" id="gen-filter-max-credits" placeholder="Max Cr." min="0" class="w-1/2 bg-canvas border border-border text-text-main rounded px-2 py-1 text-caption outline-none focus:border-border-focus">
+                        </div>
+                    </div>
+
+                    <!-- Sort Section -->
+                    <div class="flex flex-col gap-1.5 border-border">
+                        <label class="block text-micro font-bold text-text-muted uppercase tracking-wider">Sort</label>
+                        <select id="gen-sort-select" class="w-full bg-canvas border border-border text-text-main rounded px-2 py-1 text-caption outline-none cursor-pointer focus:border-border-focus">
+                            <option value="totalCreditsAsc">Total Credits (asc)</option>
+                            <option value="totalCreditsDesc">Total Credits (desc)</option>
+                            <option value="maxLoadDesc">Max Term (desc)</option>
+                            <option value="maxLoadAsc">Max Term (asc)</option>
+                            <option value="minLoadAsc">Min Term (asc)</option>
+                            <option value="minLoadDesc">Min Term (desc)</option>
+                        </select>
+                    </div>
+
+                    <button data-action="apply-generator-filters" class="w-full bg-accent hover:bg-accent-hover text-white rounded py-1.5 text-caption font-bold transition-colors shadow-sm mt-1">
+                        Apply Settings
                     </button>
                 </div>
+
                 <div id="generator-summary" class="text-caption font-medium text-text-muted mb-2 shrink-0 empty:hidden"></div>
                 <div id="generator-results-list" class="flex-1 overflow-y-auto flex flex-col pr-1">
                     <div class="text-caption text-text-muted italic p-3 text-center border border-dashed border-border rounded bg-canvas">

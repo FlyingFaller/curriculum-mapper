@@ -300,19 +300,31 @@ export const UI = {
 
     renderGeneratedSchedules() {
         const container = this.elements.generatorResultsList;
+        const summaryEl = this.elements.generatorSummary;
         if (!container) return;
         
-        const schedIds = Object.keys(State.generatedSchedules || {});
+        const totalCount = Object.keys(State.generatedSchedules || {}).length;
+        const schedIds = this.getFilteredAndSortedScheduleIds(); 
+        const filteredCount = schedIds.length;
         const anyPinned = !!State.pinnedScheduleId;
         
-        if (schedIds.length === 0) {
+        // Update summary text with filter counts
+        if (summaryEl && summaryEl.dataset.baseText) {
+            if (filteredCount < totalCount) {
+                summaryEl.innerText = `${summaryEl.dataset.baseText} (Showing ${filteredCount})`;
+            } else {
+                summaryEl.innerText = summaryEl.dataset.baseText;
+            }
+        }
+
+        if (filteredCount === 0) {
             container.innerHTML = `
                 <div class="text-caption text-text-muted italic p-3 text-center border border-dashed border-border rounded bg-canvas">
-                    No results.
+                    No results match your filters.
                 </div>`;
             return;
         }
-        
+
         let html = '';
         schedIds.forEach((id, index) => {
             const sched = State.generatedSchedules[id];
@@ -416,12 +428,99 @@ export const UI = {
     },
 
     setGeneratorSummary(text, isError = false) {
-        const summaryEl = this.elements.generatorSummary;
+        const summaryEl = UI.elements.generatorSummary;
         if (summaryEl) {
+            summaryEl.dataset.baseText = text; // Cache original solver output
             summaryEl.innerText = text;
             summaryEl.classList.toggle('text-danger-main', isError);
             summaryEl.classList.toggle('text-text-muted', !isError);
         }
+    },
+
+    getFilteredAndSortedScheduleIds() {
+        let schedIds = Object.keys(State.generatedSchedules || {});
+        if (schedIds.length === 0) return [];
+
+        const filterText = document.getElementById('gen-filter-courses')?.value.trim().toUpperCase() || '';
+        const minCredits = parseInt(document.getElementById('gen-filter-min-credits')?.value) || 0;
+        const maxCredits = parseInt(document.getElementById('gen-filter-max-credits')?.value) || Infinity;
+        const sortVal = document.getElementById('gen-sort-select')?.value || 'totalCreditsAsc';
+
+        // Apply Filters
+        schedIds = schedIds.filter(id => {
+            const sched = State.generatedSchedules[id];
+            if (sched.totalCredits < minCredits || sched.totalCredits > maxCredits) return false;
+
+            if (filterText) {
+                const tokens = filterText.split(',').map(t => t.trim()).filter(Boolean);
+                const passesText = tokens.every(token => {
+                    const exclude = token.startsWith('-');
+                    const termSplit = exclude ? token.substring(1).split(':') : token.split(':');
+                    const courseId = termSplit[0];
+                    const termConstraint = termSplit[1] ? parseInt(termSplit[1].replace('T', '')) - 1 : null;
+
+                    const courseGrid = sched.grid[courseId];
+                    let isPresent = false;
+
+                    if (courseGrid) {
+                        if (termConstraint !== null) {
+                            const termId = State.terms[termConstraint]?.id;
+                            isPresent = courseGrid[termId] === true;
+                        } else {
+                            isPresent = Object.values(courseGrid).some(val => val === true);
+                        }
+                    }
+                    return exclude ? !isPresent : isPresent;
+                });
+                if (!passesText) return false;
+            }
+            return true;
+        });
+
+        // Apply Sorts with Secondary Tie-Breakers
+        schedIds.sort((a, b) => {
+        const schedA = State.generatedSchedules[a];
+        const schedB = State.generatedSchedules[b];
+        
+        if (sortVal === 'totalCreditsAsc') {
+            if (schedA.totalCredits !== schedB.totalCredits) return schedA.totalCredits - schedB.totalCredits;
+            return schedA.maxTermLoad - schedB.maxTermLoad;
+        }
+        
+        if (sortVal === 'totalCreditsDesc') {
+            if (schedA.totalCredits !== schedB.totalCredits) return schedB.totalCredits - schedA.totalCredits;
+            return schedB.maxTermLoad - schedA.maxTermLoad;
+        }
+        
+        if (sortVal.startsWith('maxLoad') || sortVal.startsWith('minLoad')) {
+            const isMaxSort = sortVal.startsWith('maxLoad');
+            const isAsc = sortVal.endsWith('Asc');
+            
+            // Grab the appropriate pre-sorted array
+            const loadsA = isMaxSort ? schedA.sortedTermLoadsDesc : schedA.sortedTermLoadsAsc;
+            const loadsB = isMaxSort ? schedB.sortedTermLoadsDesc : schedB.sortedTermLoadsAsc;
+            
+            const len = Math.max(loadsA.length, loadsB.length);
+            
+            // Lexicographical cascading tie-breaker
+            for (let i = 0; i < len; i++) {
+                const valA = loadsA[i] || 0;
+                const valB = loadsB[i] || 0;
+                if (valA !== valB) {
+                    return isAsc ? valA - valB : valB - valA;
+                }
+            }
+            
+            // Final fallback if term loads are completely identical
+            return isAsc 
+                ? schedA.totalCredits - schedB.totalCredits 
+                : schedB.totalCredits - schedA.totalCredits;
+        }
+
+        return 0;
+    });
+
+        return schedIds;
     },
 
     updateFooter(cId) {

@@ -61,6 +61,8 @@ export function setupEventListeners() {
             case 'clear-color'           : UI.utils.setColoris(target, ''); break;
             case 'generate-schedule'     : App.generateSchedule(bypass); break;
             case 'clear-generated'       : App.clearGenerated(bypass); break;
+            case 'toggle-generator-filters': App.toggleGeneratorFilters(); break;
+            case 'apply-generator-filters': App.applyGeneratorFilters(); break;
         }
     });
 

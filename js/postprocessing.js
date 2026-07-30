@@ -101,7 +101,7 @@ export function processGeneratedSchedules(schedules, parsedData) {
 
     // --- Phase 5: Name Generation ---
     const namedSchedules = [];
-    const debugFamilies = {};
+    // const debugFamilies = {};
 
     parsedSchedules.forEach(s => {
         let nameSuffix = '';
@@ -152,8 +152,20 @@ export function processGeneratedSchedules(schedules, parsedData) {
         const finalName = `${s.totalCredits}cr: ` + (nameSuffix || 'Core Schedule');
         const fId = s.idx + 1;
         
-        namedSchedules.push({ schedule: s.sched, name: finalName, familyId: fId });
-        debugFamilies[`Sched ${fId}`] = finalName;
+        const termValues = Object.values(s.termCredits);
+        const maxTermLoad = Math.max(...termValues);
+        const sortedTermLoadsDesc = [...termValues].sort((a, b) => b - a);
+        const sortedTermLoadsAsc = [...termValues].sort((a, b) => a - b);
+
+        namedSchedules.push({ 
+            schedule: s.sched, 
+            name: finalName, 
+            totalCredits: s.totalCredits, 
+            maxTermLoad,
+            sortedTermLoadsDesc,
+            sortedTermLoadsAsc
+        });
+        // debugFamilies[`Sched ${fId}`] = finalName;
     });
 
     console.log(needsStep5 ? `  Triggered Step 5 Fallback (Credits per Term)` : `  Generated names via Rarity Pipeline`);
@@ -161,6 +173,6 @@ export function processGeneratedSchedules(schedules, parsedData) {
     
     return {
         namedSchedules,
-        debug: { freq, courseCat, needsStep5, families: debugFamilies }
+        // debug: { freq, courseCat, needsStep5, families: debugFamilies }
     };
 }
