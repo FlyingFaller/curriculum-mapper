@@ -37,7 +37,7 @@ export async function generateOptimalSchedule(parsedData, config) {
     const largeNumber = 100_000_000;
 
     const { minCredits = 1, maxCredits = 20, maxTerms = null, maxResults = 5, maxTime = 5 } = config;
-    const { allCourses: courses, availability, coursePrereqs: prereqs, whitelist, courseCredits: credits, tags, courseTags } = parsedData;
+    const { allCourses: courses, availability, coursePrereqs: prereqs, courseCoreqs: coreqs, whitelist, courseCredits: credits, tags, courseTags } = parsedData;
     const numTerms = maxTerms !== null ? Math.min(parsedData.numTerms, maxTerms) : parsedData.numTerms;
 
     function buildModelStructure() {
@@ -98,7 +98,28 @@ export async function generateOptimalSchedule(parsedData, config) {
             }
         }
 
-        // 4. Dynamic Tag Constraints
+        // 4. Corequisite / Concurrent Chains
+        for (const [course, reqList] of Object.entries(coreqs)) {
+            if (!courses.includes(course)) continue;
+            
+            for (const req of reqList) {
+                if (whitelist.has(req)) continue;
+                
+                if (courses.includes(req)) {
+                    // If the course is taken, the corequisite MUST also be taken in the degree path
+                    model.addImplication(isTaken[course], isTaken[req]);
+                    
+                    for (let tCourse = 0; tCourse < numTerms; tCourse++) {
+                        // The corequisite cannot be taken STRICTLY AFTER the course
+                        for (let tReq = tCourse + 1; tReq < numTerms; tReq++) {
+                            model.addImplication(takes[course][tCourse], takes[req][tReq].not());
+                        }
+                    }
+                }
+            }
+        }
+
+        // 5. Dynamic Tag Constraints
         const objVars = [];
         const objCoeffs = [];
 

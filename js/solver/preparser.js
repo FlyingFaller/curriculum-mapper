@@ -12,6 +12,7 @@ export function parseCurriculumState(state) {
     const whitelist = new Set(state.whitelist || []);
     const courseCredits = {};
     const coursePrereqs = {};
+    const courseCoreqs = {};
     const courseTags = {};
 
     const allCourses = Object.keys(state.courses);
@@ -20,6 +21,7 @@ export function parseCurriculumState(state) {
         const cData = state.courses[cId];
         courseCredits[cId] = cData.credits || 0;
         coursePrereqs[cId] = cData.prereqs || [];
+        courseCoreqs[cId] = cData.coreqs || [];
         courseTags[cId] = cData.tags || [];
     }
 
@@ -42,6 +44,7 @@ export function parseCurriculumState(state) {
         termIds,
         courseCredits,
         coursePrereqs,
+        courseCoreqs,
         availability,
         tags: state.tags,
         courseTags,
