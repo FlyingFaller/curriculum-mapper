@@ -1,7 +1,8 @@
 /**
- * Processes generated schedules into unique, descriptive names using a prioritized
- * constraint and rarity pipeline, calculating Total Credits dynamically.
+ * Analyzes raw solver arrays to generate human-readable schedule names 
+ * based on course rarity matrices, tags, and constraint priorities.
  */
+
 export function processGeneratedSchedules(schedules, parsedData) {
     const total = schedules.length;
     const MAX_COURSES_IN_NAME = 3; // Configurable: 2 or 3 courses per name

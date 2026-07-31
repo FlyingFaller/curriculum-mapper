@@ -1,3 +1,9 @@
+/**
+ * Application stylesheet.
+ * Maps centralized semantic design tokens to custom Tailwind variables.
+ * Enforces structural grid layouts and PDF export formatting overrides.
+ */
+
 @import "tailwindcss";
 
 /* Retain manual dark mode toggling using the .dark class */

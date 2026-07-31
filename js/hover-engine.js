@@ -1,3 +1,9 @@
+/**
+ * Relational Validation Engine.
+ * Executes graph traversals across prerequisite and corequisite arrays to 
+ * map dependencies and calculate timing/missing sequence errors.
+ */
+
 import { State } from './state.js';
 
 export const HoverEngine = {

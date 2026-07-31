@@ -1,3 +1,9 @@
+/**
+ * Centralized data store.
+ * Manages the core curriculum state, user schedules, global constraints,
+ * and ephemeral UI properties (e.g., active pins, display modes).
+ */
+
 export const State = {
     terms: [], 
     courses: {}, 

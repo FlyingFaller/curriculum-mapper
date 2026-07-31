@@ -1,3 +1,8 @@
+/**
+ * Parses the nested UI state object into the flattened, numerical data structures 
+ * required by the solver.
+ */
+
 export function parseCurriculumState(state) {
     const termIds = state.terms.map(t => t.id);
     const termNames = {};

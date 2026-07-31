@@ -1,3 +1,8 @@
+<!-- 
+  * Application entry point and layout shell.
+  * Defines the structural DOM, static modal containers, and imports external dependencies.
+-->
+
 <!DOCTYPE html>
 <html lang="en">
     <head>
@@ -116,7 +121,7 @@
             </div>
         </main>
 
-        <footer id="info-footer" style="height: 192px;" class="relative bg-surface border-t border-border p-5 shrink-0 flex flex-col shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] z-40 transition-colors">
+        <footer id="info-footer" class="h-48 relative bg-surface border-t border-border p-5 shrink-0 flex flex-col shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] z-40 transition-colors">
             <div id="footer-resizer" class="absolute top-0 left-0 w-full h-1.5 cursor-row-resize bg-transparent hover:bg-accent-hover transition-colors z-50"></div>
             
             <h2 id="desc-title" class="text-title-sm font-bold text-text-main mt-1">Hover over a course to see its description.</h2>
@@ -436,7 +441,7 @@
                     </div>
                     <div class="bg-surface border border-border rounded-md shadow-sm p-2 flex items-center justify-between group relative">
                         <span id="sidebar-active-name" class="text-sm text-text-main truncate text-left w-full"></span>
-                        <div id="active-schedule-action-menu" class="card-action-menu" style="top: 0.125rem; right: 0.125rem;">
+                        <div id="active-schedule-action-menu" class="card-action-menu top-0.5 right-0.5">
                             <button data-action="delete-active-schedule" class="btn-icon-danger" title="Delete Active Schedule">
                                 <i class="ph ph-trash text-base leading-none"></i>
                             </button>

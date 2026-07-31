@@ -1,3 +1,8 @@
+/**
+ * Manages the application's light/dark mode state, handles user preferences, 
+ * and synchronizes with the operating system's color scheme.
+ */
+
 export const ThemeConfig = {
     init() {
         const saved = localStorage.getItem('themePref');

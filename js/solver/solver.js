@@ -1,3 +1,9 @@
+/**
+ * Optimization Engine.
+ * Integrates Google OR-Tools (CP-SAT WASM) to construct and solve 
+ * a constraint programming model for optimal schedule paths.
+ */
+
 import { CpModel, CpSolver, CpSolverSolutionCallback, LinearExpr, setWorkerBridgeEnabled } from 'or-tools-wasm/cp-sat';
 
 setWorkerBridgeEnabled(true);
@@ -30,7 +36,7 @@ class TopScheduleCollector extends CpSolverSolutionCallback {
 export async function generateOptimalSchedule(parsedData, config) {
     const largeNumber = 100_000_000;
 
-    const { minCredits = 1, maxCredits = 20, maxTerms = null, maxOptions = 5, maxTime = 5 } = config;
+    const { minCredits = 1, maxCredits = 20, maxTerms = null, maxResults = 5, maxTime = 5 } = config;
     const { allCourses: courses, availability, coursePrereqs: prereqs, whitelist, courseCredits: credits, tags, courseTags } = parsedData;
     const numTerms = maxTerms !== null ? Math.min(parsedData.numTerms, maxTerms) : parsedData.numTerms;
 
@@ -151,7 +157,7 @@ export async function generateOptimalSchedule(parsedData, config) {
     solver2.parameters.maxTimeInSeconds = maxTime;
     solver2.parameters.enumerateAllSolutions = true;
 
-    const collector = new TopScheduleCollector(pass2.takes, courses, numTerms, maxOptions);
+    const collector = new TopScheduleCollector(pass2.takes, courses, numTerms, maxResults);
     await solver2.solve(pass2.model, collector);
 
     return { schedules: collector.solutions, score: bestScore, status: statusString };
